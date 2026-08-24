@@ -1,26 +1,30 @@
 name: Add Pull Request To Projects
 
 'on':
-  workflow_call:
+  workflow_dispatch:
     inputs:
-      project_field_values:
-        description: >-
-          List of mappings with project, field, and value.
-          Example YAML block:
-          - project: 123
-            field: Status
-            value: In review
-        required: true
+      repository:
+        description: Repository name the pull request belongs to.
+        required: false
         type: string
       pull_request_node_id:
-        description: Optional pull request node id. If omitted, reads from event payload.
+        description: Node ID of the pull request to add to projects.
+        required: true
+        type: string
+      project_field_values:
+        description: >-
+          JSON list of mappings, for example
+          [{"project":194,"field":"Status","value":"Review"}]
+        required: true
+        type: string
+      organization:
+        description: Organization login. Defaults to the repository owner.
         required: false
         type: string
 
 permissions:
   contents: read
   pull-requests: read
-  repository-projects: write
 
 jobs:
   add-pr-to-projects:
@@ -50,17 +54,17 @@ jobs:
         with:
           client-id: ${{ vars.PROJECT_HANDLER_BOT_APP_ID }}
           private-key: ${{ secrets.PROJECT_HANDLER_BOT_PEM }}
-          owner: datasciencecampus
-          repositories: ${{ github.event.repository.name }}
+          owner: ${{ inputs.organization || github.event.repository.owner.login }}
+          repositories: ${{ inputs.repository || github.event.repository.name }}
           permission-organization-projects: write
           permission-pull-requests: read
 
       - name: Add pull request to projects and set field values (Python)
         env:
+          GITHUB_ORG: ${{ inputs.organization || github.event.repository.owner.login }}
           PROJECT_FIELD_VALUES: ${{ inputs.project_field_values }}
           PULL_REQUEST_NODE_ID: ${{ inputs.pull_request_node_id }}
           GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
-          GITHUB_EVENT_PATH: ${{ github.event_path }}
         shell: python
         run: |
           import json
@@ -68,7 +72,7 @@ jobs:
           import sys
           import urllib.request
 
-          ORG = "datasciencecampus"
+          ORG = os.environ.get("GITHUB_ORG", "").strip()
 
           def graphql(token, query, variables):
               payload = json.dumps({"query": query, "variables": variables}).encode("utf-8")
@@ -106,7 +110,7 @@ jobs:
               # Fallback for YAML-like blocks:
               # - project: 123
               #   field: Status
-              #   value: In review
+              #   value: Review
               entries = []
               current = {}
               for original_line in raw.splitlines():
@@ -295,109 +299,109 @@ jobs:
                   },
               )
 
-                def normalize_project_number(project_value):
-                  project_number_str = str(project_value).strip()
-                  if project_number_str.startswith("[") and project_number_str.endswith("]"):
-                    project_number_str = project_number_str[1:-1].strip().strip("\"'")
-                  if not project_number_str.isdigit():
-                    return None
-                  return int(project_number_str)
+          def normalize_project_number(project_value):
+              project_number_str = str(project_value).strip()
+              if project_number_str.startswith("[") and project_number_str.endswith("]"):
+                  project_number_str = project_number_str[1:-1].strip().strip("\"'")
+              if not project_number_str.isdigit():
+                  return None
+              return int(project_number_str)
 
-                def build_project_cache(token, mappings):
-                  numbers = []
-                  for mapping in mappings:
-                    project_value = mapping.get("project")
-                    if project_value is None:
+          def build_project_cache(token, mappings):
+              numbers = []
+              for mapping in mappings:
+                  project_value = mapping.get("project")
+                  if project_value is None:
                       continue
-                    project_number = normalize_project_number(project_value)
-                    if project_number is not None and project_number not in numbers:
+                  project_number = normalize_project_number(project_value)
+                  if project_number is not None and project_number not in numbers:
                       numbers.append(project_number)
 
-                  cache = {}
-                  for project_number in numbers:
-                    cache[project_number] = get_project(token, project_number)
-                  return cache
+              cache = {}
+              for project_number in numbers:
+                  cache[project_number] = get_project(token, project_number)
+              return cache
 
-                def validate_mappings(mappings, project_cache):
-                  normalized = []
-                  errors = []
+          def validate_mappings(mappings, project_cache):
+              normalized = []
+              errors = []
 
-                  for idx, mapping in enumerate(mappings, start=1):
-                    if not isinstance(mapping, dict):
+              for idx, mapping in enumerate(mappings, start=1):
+                  if not isinstance(mapping, dict):
                       errors.append(f"Entry {idx}: each mapping must be an object/dictionary.")
                       continue
 
-                    project_value = mapping.get("project")
-                    field_name = str(mapping.get("field", "")).strip()
-                    field_value = str(mapping.get("value", "")).strip()
+                  project_value = mapping.get("project")
+                  field_name = str(mapping.get("field", "")).strip()
+                  field_value = str(mapping.get("value", "")).strip()
 
-                    if project_value is None:
+                  if project_value is None:
                       errors.append(f"Entry {idx}: missing 'project'.")
                       continue
-                    if not field_name:
+                  if not field_name:
                       errors.append(f"Entry {idx}: missing 'field'.")
                       continue
-                    if not field_value:
+                  if not field_value:
                       errors.append(f"Entry {idx}: missing 'value'.")
                       continue
 
-                    project_number = normalize_project_number(project_value)
-                    if project_number is None:
+                  project_number = normalize_project_number(project_value)
+                  if project_number is None:
                       errors.append(
-                        f"Entry {idx}: invalid project '{project_value}'. Use a numeric project number."
+                          f"Entry {idx}: invalid project '{project_value}'. Use a numeric project number."
                       )
                       continue
 
-                    project = project_cache.get(project_number)
-                    if not project:
+                  project = project_cache.get(project_number)
+                  if not project:
                       errors.append(
-                        f"Entry {idx}: project #{project_number} was not found in {ORG}."
+                          f"Entry {idx}: project #{project_number} was not found in {ORG}."
                       )
                       continue
 
-                    fields = project.get("fields", {}).get("nodes", [])
-                    target_field = None
-                    for field in fields:
+                  fields = project.get("fields", {}).get("nodes", [])
+                  target_field = None
+                  for field in fields:
                       if str(field.get("name", "")).lower() == field_name.lower():
-                        target_field = field
-                        break
+                          target_field = field
+                          break
 
-                    if not target_field:
+                  if not target_field:
                       errors.append(
-                        f"Entry {idx}: field '{field_name}' was not found in project #{project_number}."
+                          f"Entry {idx}: field '{field_name}' was not found in project #{project_number}."
                       )
                       continue
 
-                    field_id = target_field.get("id")
-                    data_type = str(target_field.get("dataType", "")).upper()
-                    options = target_field.get("options")
+                  field_id = target_field.get("id")
+                  data_type = str(target_field.get("dataType", "")).upper()
+                  options = target_field.get("options")
 
-                    option_id = ""
-                    if isinstance(options, list):
+                  option_id = ""
+                  if isinstance(options, list):
                       for option in options:
-                        if str(option.get("name", "")).lower() == field_value.lower():
-                          option_id = option.get("id", "")
-                          break
+                          if str(option.get("name", "")).lower() == field_value.lower():
+                              option_id = option.get("id", "")
+                              break
                       if not option_id:
-                        errors.append(
-                          f"Entry {idx}: value '{field_value}' not found in field '{field_name}' options."
-                        )
-                        continue
+                          errors.append(
+                              f"Entry {idx}: value '{field_value}' not found in field '{field_name}' options."
+                          )
+                          continue
 
-                    normalized.append(
+                  normalized.append(
                       {
-                        "index": idx,
-                        "project_number": project_number,
-                        "project": project,
-                        "field_name": field_name,
-                        "field_value": field_value,
-                        "field_id": field_id,
-                        "data_type": data_type,
-                        "single_select_option_id": option_id,
+                          "index": idx,
+                          "project_number": project_number,
+                          "project": project,
+                          "field_name": field_name,
+                          "field_value": field_value,
+                          "field_id": field_id,
+                          "data_type": data_type,
+                          "single_select_option_id": option_id,
                       }
-                    )
+                  )
 
-                  return normalized, errors
+              return normalized, errors
 
           token = os.environ.get("GITHUB_TOKEN", "")
           mappings = parse_project_field_values(os.environ.get("PROJECT_FIELD_VALUES", ""))
@@ -405,6 +409,10 @@ jobs:
 
           if not token:
               print("Missing app token.")
+              sys.exit(1)
+
+          if not ORG:
+              print("Missing organization name. Provide it in the repository_dispatch payload as 'organization'.")
               sys.exit(1)
 
           if not mappings:
@@ -415,15 +423,15 @@ jobs:
               print("Unable to resolve pull request node id from input or event payload.")
               sys.exit(1)
 
-            project_cache = build_project_cache(token, mappings)
-            normalized_mappings, validation_errors = validate_mappings(mappings, project_cache)
-            if validation_errors:
+          project_cache = build_project_cache(token, mappings)
+          normalized_mappings, validation_errors = validate_mappings(mappings, project_cache)
+          if validation_errors:
               print("Validation failed for project field mappings:")
               for err in validation_errors:
-                print(f"- {err}")
+                  print(f"- {err}")
               sys.exit(1)
 
-            for entry in normalized_mappings:
+          for entry in normalized_mappings:
               idx = entry["index"]
               project_number = entry["project_number"]
               project = entry["project"]

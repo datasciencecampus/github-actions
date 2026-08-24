@@ -9,8 +9,8 @@ This repository provides reusable GitHub Actions workflows for the datascienceca
 
 Some workflows require org-scoped credentials, including:
 
-- PROJECT_HANDLER_BOT_APP_ID (organization variable)
-- PROJECT_HANDLER_BOT_PEM (organization secret)
+- PROJECT_ROUTER_BOT_APP_ID (organization variable)
+- PROJECT_ROUTER_BOT_PEM (organization secret)
 
 We needed to decide whether callers should pass secrets through to reusable workflows, or whether secret usage should be owned by the called workflow implementation.
 

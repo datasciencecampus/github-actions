@@ -1,25 +1,44 @@
-# Use the add-pr-to-projects reusable workflow
+# Use add-pr-to-projects via repository_dispatch
 
-Use this workflow when a pull request is opened and you want to add it to one or more `datasciencecampus` Projects, then set a field value (for example `Status = In review`).
+Use this workflow when a pull request is opened and you want to add it to one or more `datasciencecampus` Projects, then set a field value (for example `Status = Review`).
 
-Workflow being called:
+Workflow:
 
 - `.github/workflows/add-pr-to-projects.yml` in this repository
 
 ## Prerequisites
 
-1. The calling repository can use workflows from `datasciencecampus/github-actions`.
+1. The caller can send `repository_dispatch` to `datasciencecampus/github-actions`.
 2. Organization credentials are available to this workflow:
-   - `PROJECT_HANDLER_BOT_APP_ID` (variable)
-   - `PROJECT_HANDLER_BOT_PEM` (secret)
+
+- `PROJECT_HANDLER_BOT_APP_ID` (variable)
+- `PROJECT_HANDLER_BOT_PEM` (secret)
+
 3. Each target project and field exists in `datasciencecampus` Projects.
 
-## Add a caller workflow
+## Trigger this repo via repository_dispatch
 
-Create a workflow in your repository:
+If you want execution to happen in `datasciencecampus/github-actions` (for example to use its environment secrets), trigger this workflow with a repository dispatch event.
+
+Example using GitHub CLI:
+
+```bash
+gh api \
+  --method POST \
+  -H "Accept: application/vnd.github+json" \
+  /repos/datasciencecampus/github-actions/dispatches \
+  -f event_type='add-pr-to-projects' \
+  -f client_payload='{
+    "repository":"my-caller-repo",
+    "pull_request_node_id":"PR_kwDOExample",
+    "project_field_values":"[{\"project\":194,\"field\":\"Status\",\"value\":\"Review\"}]"
+  }'
+```
+
+Create a workflow in your repository to send the dispatch event:
 
 ```yaml
-name: Add PRs to org projects
+name: Dispatch add-pr-to-projects
 
 on:
   pull_request:
@@ -27,18 +46,30 @@ on:
 
 permissions:
   contents: read
-  pull-requests: read
-  repository-projects: write
 
 jobs:
-  add-pr-to-projects:
-    uses: datasciencecampus/github-actions/.github/workflows/add-pr-to-projects.yml@main
-    with:
-      project_field_values: |
-        [
-          {"project": 194, "field": "Status", "value": "In review"}
-        ]
-      pull_request_node_id: ${{ github.event.pull_request.node_id }}
+  dispatch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send repository_dispatch
+        env:
+          DISPATCH_TOKEN: ${{ secrets.GH_ACTIONS_DISPATCH_TOKEN }}
+        run: |
+          curl -sS -L \
+            -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${DISPATCH_TOKEN}" \
+            https://api.github.com/repos/datasciencecampus/github-actions/dispatches \
+            -d @- <<'JSON'
+          {
+            "event_type": "add-pr-to-projects",
+            "client_payload": {
+              "repository": "${{ github.event.repository.name }}",
+              "pull_request_node_id": "${{ github.event.pull_request.node_id }}",
+              "project_field_values": "[{\"project\":194,\"field\":\"Status\",\"value\":\"Review\"}]"
+            }
+          }
+          JSON
 ```
 
 ## Mapping input
@@ -53,15 +84,10 @@ Each entry should include:
 
 Example entry:
 
-- `{"project": 194, "field": "Status", "value": "In review"}`
+- `{"project": 194, "field": "Status", "value": "Review"}`
 
-## Manual test
+Dispatch payload fields:
 
-Use this repository's test workflow:
-
-- `.github/workflows/test-add-pr-to-projects.yml`
-
-For manual runs, pass both:
-
-- `project_field_values`
-- `pull_request_node_id` (if not running from a pull request event)
+- `project_field_values` (required): JSON string list of mappings
+- `pull_request_node_id` (required): pull request node id
+- `repository` (optional): source repository name for token scoping

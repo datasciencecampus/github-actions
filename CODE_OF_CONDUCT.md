@@ -4,9 +4,9 @@ Contributors to repositories hosted by the Office for National Statistics (ONS) 
 
 > Terminology:
 >
-> * "project" refers to ONS repositories and associated collaboration spaces.
-> * "maintainer" refers to ONS repository owners and designated maintainers.
-> * "leadership" refers to repository owners, line managers, and delegated governance roles.
+> - "project" refers to ONS repositories and associated collaboration spaces.
+> - "maintainer" refers to ONS repository owners and designated maintainers.
+> - "leadership" refers to repository owners, line managers, and delegated governance roles.
 
 ## Our Pledge
 
@@ -18,19 +18,19 @@ We commit to act and interact in ways that contribute to an open, welcoming, div
 
 Examples of behaviour that contributes to a positive environment include:
 
-* Demonstrating empathy and kindness toward other people
-* Being respectful of differing opinions, viewpoints, and experiences
-* Giving and gracefully accepting constructive feedback
-* Taking responsibility and apologising to those affected by our mistakes, and learning from the experience
-* Focusing on what is best for the overall community and public service mission
+- Demonstrating empathy and kindness toward other people
+- Being respectful of differing opinions, viewpoints, and experiences
+- Giving and gracefully accepting constructive feedback
+- Taking responsibility and apologising to those affected by our mistakes, and learning from the experience
+- Focusing on what is best for the overall community and public service mission
 
 Examples of unacceptable behaviour include:
 
-* Harassment of any kind, including sexual language or imagery, unwelcome advances
-* Trolling, insulting or derogatory comments, and personal or political attacks
-* Public or private harassment, including repeated unwanted contact
-* Publishing others' private information (such as physical or email address) without explicit permission
-* Other conduct which could reasonably be considered inappropriate in a professional setting
+- Harassment of any kind, including sexual language or imagery, unwelcome advances
+- Trolling, insulting or derogatory comments, and personal or political attacks
+- Public or private harassment, including repeated unwanted contact
+- Publishing others' private information (such as physical or email address) without explicit permission
+- Other conduct which could reasonably be considered inappropriate in a professional setting
 
 ## Enforcement Responsibilities
 
