@@ -4,7 +4,9 @@ Adds an issue to one or more `datasciencecampus` ProjectsV2 boards and optionall
 
 If no field is specified, the issue is added to the project without any field update — useful for simple triage boards.
 
-Workflow: `.github/workflows/add-issue-to-projects.yml`
+Reusable workflow: `.github/workflows/add-issue-to-projects.yml`
+
+Internal implementation: `.github/workflows/add-issue-to-projects-impl.yml`
 
 ## Prerequisites
 
@@ -29,44 +31,13 @@ permissions:
 
 jobs:
   add-issue-to-projects:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Create GitHub App token for dispatch
-        id: app-token
-        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
-        with:
-          client-id: ${{ vars.PROJECT_ROUTER_BOT_APP_ID }}
-          private-key: ${{ secrets.PROJECT_ROUTER_BOT_PEM }}
-          owner: datasciencecampus
-          repositories: github-actions
-          permission-actions: write
-
-      - name: Dispatch add-issue-to-projects workflow
-        env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
-          PROJECT_FIELD_VALUES: '[{"project":194}]'
-          ISSUE_NODE_ID: ${{ github.event.issue.node_id }}
-          REPOSITORY_NAME: ${{ github.event.repository.name }}
-          REF: ${{ github.ref_name }}
-        run: |
-          jq -n \
-            --arg ref "$REF" \
-            --arg repo "$REPOSITORY_NAME" \
-            --arg node_id "$ISSUE_NODE_ID" \
-            --arg project_field_values "$PROJECT_FIELD_VALUES" \
-            '{
-              ref: $ref,
-              inputs: {
-                repository: $repo,
-                issue_node_id: $node_id,
-                project_field_values: $project_field_values
-              }
-            }' | curl -sS -L --fail-with-body \
-              -X POST \
-              -H "Accept: application/vnd.github+json" \
-              -H "Authorization: Bearer ${GH_TOKEN}" \
-              https://api.github.com/repos/datasciencecampus/github-actions/actions/workflows/add-issue-to-projects.yml/dispatches \
-              -d @-
+    uses: datasciencecampus/github-actions/.github/workflows/add-issue-to-projects.yml@v0.2.0
+    secrets:
+      PROJECT_ROUTER_BOT_PRIVATE_KEY: ${{ secrets.PROJECT_ROUTER_BOT_PRIVATE_KEY }}
+    with:
+      repository: ${{ github.event.repository.name }}
+      issue_node_id: ${{ github.event.issue.node_id }}
+      project_field_values: '[{"project":194}]'
 ```
 
 ## Input format
@@ -102,7 +73,7 @@ Your project number appears in the URL of the project board:
 
 ## Security checks performed by the called workflow
 
-Before the issue is added to a project, the central workflow will:
+Before the issue is added to a project, the internal implementation workflow will:
 
 1. Verify that the submitted issue node ID resolves to the named repository.
 2. Refuse requests that claim an organization other than `datasciencecampus`.

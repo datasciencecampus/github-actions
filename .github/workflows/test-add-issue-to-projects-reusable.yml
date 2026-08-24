@@ -1,4 +1,4 @@
-name: Test Add Issue To Projects
+name: Test Add Issue To Projects Reusable Workflow
 
 'on':
   issues:
@@ -20,7 +20,7 @@ permissions:
   contents: read
 
 jobs:
-  test-add-issue-to-projects:
+  test-add-issue-to-projects-reusable:
     uses: ./.github/workflows/add-issue-to-projects.yml
     secrets:
       PROJECT_ROUTER_BOT_PRIVATE_KEY: ${{ secrets.PROJECT_ROUTER_BOT_PRIVATE_KEY }}

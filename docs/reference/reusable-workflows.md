@@ -7,7 +7,7 @@ This page lists the workflows in this repository and their caller-facing contrac
 Callers use the router bot credentials to dispatch workflows:
 
 - `PROJECT_ROUTER_BOT_APP_ID` (Actions variable, org-level)
-- `PROJECT_ROUTER_BOT_PEM` (Actions secret, org-level)
+- `PROJECT_ROUTER_BOT_PRIVATE_KEY` (Actions secret, org-level)
 
 Project-handling credentials are used internally and are not required from callers. The called workflows verify that the requested organization matches this repository owner and that the submitted issue or pull request node ID resolves back to the repository named in the request. See [GitHub Apps reference](github-apps.md).
 
@@ -15,9 +15,36 @@ Project-handling credentials are used internally and are not required from calle
 
 Workflow file: `.github/workflows/add-issue-to-projects.yml`
 
+### Issue Call Trigger
+
+`workflow_call`
+
+### Issue Call Inputs
+
+- `ref`: required. Git ref in this repository to dispatch.
+- `repository`: required. Source repository name.
+- `issue_node_id`: required. Node ID of the issue to add.
+- `project_field_values`: required. JSON array of project mappings.
+- `organization`: optional compatibility field; if provided it is forwarded to the implementation workflow.
+
+### Issue Call Behavior
+
+1. Validates router-bot credentials and required dispatch inputs.
+2. Mints a router-bot token with `actions: write` on `datasciencecampus/github-actions`.
+3. Dispatches `.github/workflows/add-issue-to-projects-impl.yml` with the supplied inputs.
+
+### Issue Call Notes
+
+- This is the public reusable workflow for the issue flow.
+- It is most useful for workflows in this repository, or same-organization callers that intentionally expose the router-bot secret to the called workflow.
+
+## add-issue-to-projects-impl
+
+Workflow file: `.github/workflows/add-issue-to-projects-impl.yml`
+
 ### Issue Trigger
 
-`workflow_dispatch` via `POST /repos/datasciencecampus/github-actions/actions/workflows/add-issue-to-projects.yml/dispatches`
+`workflow_dispatch` via `POST /repos/datasciencecampus/github-actions/actions/workflows/add-issue-to-projects-impl.yml/dispatches`
 
 ### Issue Inputs
 
@@ -53,9 +80,36 @@ Each entry must have `project`. `field` and `value` are optional — if omitted 
 
 Workflow file: `.github/workflows/add-pr-to-projects.yml`
 
+### Pull Request Call Trigger
+
+`workflow_call`
+
+### Pull Request Call Inputs
+
+- `ref`: optional. Git ref in this repository to dispatch. Defaults to the commit SHA of the reusable workflow run.
+- `repository`: required. Source repository name.
+- `pull_request_node_id`: required. Node ID of the pull request to add.
+- `project_field_values`: required. JSON array of project mappings.
+- `organization`: optional compatibility field; if provided it is forwarded to the implementation workflow.
+
+### Pull Request Call Behavior
+
+1. Validates router-bot credentials and required dispatch inputs.
+2. Mints a router-bot token with `actions: write` on `datasciencecampus/github-actions`.
+3. Dispatches `.github/workflows/add-pr-to-projects-impl.yml` with the supplied inputs.
+
+### Pull Request Call Notes
+
+- This is the public reusable workflow for the pull request flow.
+- It defaults to dispatching the same commit SHA the reusable workflow itself was invoked from, which keeps release-tag callers pinned to matching implementation code.
+
+## add-pr-to-projects-impl
+
+Workflow file: `.github/workflows/add-pr-to-projects-impl.yml`
+
 ### Pull Request Trigger
 
-`workflow_dispatch` via `POST /repos/datasciencecampus/github-actions/actions/workflows/add-pr-to-projects.yml/dispatches`
+`workflow_dispatch` via `POST /repos/datasciencecampus/github-actions/actions/workflows/add-pr-to-projects-impl.yml/dispatches`
 
 ### Pull Request Inputs
 

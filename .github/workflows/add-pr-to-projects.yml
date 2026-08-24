@@ -1,8 +1,12 @@
 name: Add Pull Request To Projects
 
 'on':
-  workflow_dispatch:
+  workflow_call:
     inputs:
+      ref:
+        description: Git ref in this repository to dispatch. Defaults to the commit SHA of this reusable workflow.
+        required: false
+        type: string
       repository:
         description: Repository name the pull request belongs to.
         required: true
@@ -21,482 +25,92 @@ name: Add Pull Request To Projects
         description: Organization login. Must match the owner of this repository.
         required: false
         type: string
+    secrets:
+      PROJECT_ROUTER_BOT_PRIVATE_KEY:
+        description: Private key for the router GitHub App used to dispatch the implementation workflow.
+        required: true
 
 permissions:
   contents: read
-  pull-requests: read
 
 jobs:
   add-pr-to-projects:
     runs-on: ubuntu-latest
-    environment: project-automation
     steps:
+      - name: Validate dispatch inputs
+        env:
+          REF: ${{ inputs.ref || github.workflow_sha }}
+          TARGET_REPOSITORY: ${{ inputs.repository }}
+          PULL_REQUEST_NODE_ID: ${{ inputs.pull_request_node_id }}
+        run: |
+          if [ -z "$REF" ]; then
+            echo "Missing ref input."
+            exit 1
+          fi
+
+          if [ -z "$TARGET_REPOSITORY" ]; then
+            echo "Missing repository input."
+            exit 1
+          fi
+
+          if [ -z "$PULL_REQUEST_NODE_ID" ]; then
+            echo "Missing pull request node id."
+            exit 1
+          fi
+
       - name: Validate app credentials
         env:
-          PROJECT_HANDLER_BOT_APP_ID: ${{ vars.PROJECT_HANDLER_BOT_APP_ID }}
-          PROJECT_HANDLER_BOT_PEM: ${{ secrets.PROJECT_HANDLER_BOT_PEM }}
+          PROJECT_ROUTER_BOT_APP_ID: ${{ vars.PROJECT_ROUTER_BOT_APP_ID }}
+          PROJECT_ROUTER_BOT_PRIVATE_KEY: ${{ secrets.PROJECT_ROUTER_BOT_PRIVATE_KEY }}
         run: |
-          if [ -z "$PROJECT_HANDLER_BOT_APP_ID" ]; then
-            echo "Missing variable PROJECT_HANDLER_BOT_APP_ID."
-            echo "Create it in the project-automation environment for this repository."
+          if [ -z "$PROJECT_ROUTER_BOT_APP_ID" ]; then
+            echo "Missing variable PROJECT_ROUTER_BOT_APP_ID."
             exit 1
           fi
 
-          if [ -z "$PROJECT_HANDLER_BOT_PEM" ]; then
-            echo "Missing secret PROJECT_HANDLER_BOT_PEM."
-            echo "Create it in the project-automation environment for this repository."
+          if [ -z "$PROJECT_ROUTER_BOT_PRIVATE_KEY" ]; then
+            echo "Missing secret PROJECT_ROUTER_BOT_PRIVATE_KEY."
             exit 1
           fi
 
-      - name: Validate dispatch scope
-        env:
-          REQUESTED_ORGANIZATION: ${{ inputs.organization }}
-          TARGET_REPOSITORY: ${{ inputs.repository }}
-          TRUSTED_ORGANIZATION: ${{ github.repository_owner }}
-        shell: python
-        run: |
-          import os
-          import sys
-
-          trusted_org = os.environ.get("TRUSTED_ORGANIZATION", "").strip()
-          requested_org = os.environ.get("REQUESTED_ORGANIZATION", "").strip()
-          target_repo = os.environ.get("TARGET_REPOSITORY", "").strip()
-
-          if not target_repo:
-              print("Missing repository input.")
-              sys.exit(1)
-
-          if requested_org and requested_org != trusted_org:
-              print(f"Invalid organization '{requested_org}'. Only '{trusted_org}' is allowed.")
-              sys.exit(1)
-
-      - name: Create GitHub App token
+      - name: Create GitHub App token for dispatch
         id: app-token
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
-          client-id: ${{ vars.PROJECT_HANDLER_BOT_APP_ID }}
-          private-key: ${{ secrets.PROJECT_HANDLER_BOT_PEM }}
-          owner: ${{ github.repository_owner }}
-          repositories: ${{ inputs.repository }}
-          permission-organization-projects: write
-          permission-pull-requests: read
+          client-id: ${{ vars.PROJECT_ROUTER_BOT_APP_ID }}
+          private-key: ${{ secrets.PROJECT_ROUTER_BOT_PRIVATE_KEY }}
+          owner: datasciencecampus
+          repositories: github-actions
+          permission-actions: write
 
-      - name: Add pull request to projects and set field values (Python)
+      - name: Dispatch add-pr-to-projects implementation workflow
         env:
-          GITHUB_ORG: ${{ github.repository_owner }}
-          PROJECT_FIELD_VALUES: ${{ inputs.project_field_values }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          REF: ${{ inputs.ref || github.workflow_sha }}
+          REPOSITORY_NAME: ${{ inputs.repository }}
           PULL_REQUEST_NODE_ID: ${{ inputs.pull_request_node_id }}
-          TARGET_REPOSITORY: ${{ inputs.repository }}
-          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
-        shell: python
+          PROJECT_FIELD_VALUES: ${{ inputs.project_field_values }}
+          ORGANIZATION: ${{ inputs.organization }}
         run: |
-          import json
-          import os
-          import sys
-          import urllib.request
-
-          ORG = os.environ.get("GITHUB_ORG", "").strip()
-          TARGET_REPOSITORY = os.environ.get("TARGET_REPOSITORY", "").strip()
-
-          def graphql(token, query, variables):
-              payload = json.dumps({"query": query, "variables": variables}).encode("utf-8")
-              req = urllib.request.Request(
-                  "https://api.github.com/graphql",
-                  data=payload,
-                  headers={
-                      "Authorization": f"Bearer {token}",
-                      "Content-Type": "application/json",
-                      "Accept": "application/vnd.github+json",
-                  },
-                  method="POST",
-              )
-              with urllib.request.urlopen(req) as resp:
-                  result = json.loads(resp.read().decode("utf-8"))
-              if result.get("errors"):
-                  raise RuntimeError(json.dumps(result["errors"]))
-              return result.get("data", {})
-
-          def parse_project_field_values(raw):
-              raw = (raw or "").strip()
-              if not raw:
-                  return []
-
-              try:
-                  parsed = json.loads(raw)
-                  if isinstance(parsed, dict):
-                      return [parsed]
-                  if isinstance(parsed, list):
-                      return parsed
-              except Exception:
-                  pass
-
-              entries = []
-              current = {}
-              for original_line in raw.splitlines():
-                  line = original_line.strip()
-                  if not line:
-                      continue
-                  if line.startswith("- "):
-                      if current:
-                          entries.append(current)
-                          current = {}
-                      line = line[2:].strip()
-                  if ":" not in line:
-                      continue
-                  key, value = line.split(":", 1)
-                  key = key.strip()
-                  value = value.strip().strip("\"'")
-                  if value.startswith("[") and value.endswith("]"):
-                      value = value[1:-1].strip().strip("\"'")
-                  current[key] = value
-              if current:
-                  entries.append(current)
-              return entries
-
-          def get_pr_node_id(input_node_id):
-              if input_node_id:
-                  return input_node_id
-              event_path = os.environ.get("GITHUB_EVENT_PATH", "")
-              if not event_path:
-                  return ""
-              with open(event_path, "r", encoding="utf-8") as fh:
-                  event = json.load(fh)
-              return event.get("pull_request", {}).get("node_id", "")
-
-          def get_project(token, number):
-              query = """
-              query($org: String!, $number: Int!) {
-                organization(login: $org) {
-                  projectV2(number: $number) {
-                    id
-                    number
-                    title
-                    fields(first: 100) {
-                      nodes {
-                        ... on ProjectV2FieldCommon {
-                          id
-                          name
-                          dataType
-                        }
-                        ... on ProjectV2SingleSelectField {
-                          id
-                          name
-                          dataType
-                          options {
-                            id
-                            name
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
+          jq -n \
+            --arg ref "$REF" \
+            --arg repo "$REPOSITORY_NAME" \
+            --arg pull_request_node_id "$PULL_REQUEST_NODE_ID" \
+            --arg project_field_values "$PROJECT_FIELD_VALUES" \
+            --arg organization "$ORGANIZATION" \
+            '{
+              ref: $ref,
+              inputs: {
+                repository: $repo,
+                pull_request_node_id: $pull_request_node_id,
+                project_field_values: $project_field_values,
+                organization: $organization
               }
-              """
-              data = graphql(token, query, {"org": ORG, "number": number})
-              return data.get("organization", {}).get("projectV2")
+            }' > payload.json
 
-          def get_pull_request_repository(token, pull_request_node_id):
-              query = """
-              query($id: ID!) {
-                node(id: $id) {
-                  ... on PullRequest {
-                    id
-                    repository {
-                      name
-                      owner {
-                        login
-                      }
-                    }
-                  }
-                }
-              }
-              """
-              data = graphql(token, query, {"id": pull_request_node_id})
-              node = data.get("node") or {}
-              repository = node.get("repository") or {}
-              owner = repository.get("owner") or {}
-              return owner.get("login", ""), repository.get("name", "")
-
-          def find_existing_item(token, project_id, pull_request_node_id):
-              query = """
-              query($projectId: ID!, $cursor: String) {
-                node(id: $projectId) {
-                  ... on ProjectV2 {
-                    items(first: 100, after: $cursor) {
-                      nodes {
-                        id
-                        content {
-                          ... on PullRequest {
-                            id
-                          }
-                        }
-                      }
-                      pageInfo {
-                        hasNextPage
-                        endCursor
-                      }
-                    }
-                  }
-                }
-              }
-              """
-              cursor = None
-              while True:
-                  data = graphql(token, query, {"projectId": project_id, "cursor": cursor})
-                  items = data.get("node", {}).get("items", {})
-                  for item in items.get("nodes", []):
-                      content = item.get("content") or {}
-                      if content.get("id") == pull_request_node_id:
-                          return item.get("id")
-                  page_info = items.get("pageInfo", {})
-                  if not page_info.get("hasNextPage"):
-                      return ""
-                  cursor = page_info.get("endCursor")
-
-          def add_item(token, project_id, pull_request_node_id):
-              mutation = """
-              mutation($projectId: ID!, $contentId: ID!) {
-                addProjectV2ItemById(input: {projectId: $projectId, contentId: $contentId}) {
-                  item {
-                    id
-                  }
-                }
-              }
-              """
-              data = graphql(
-                  token,
-                  mutation,
-                  {"projectId": project_id, "contentId": pull_request_node_id},
-              )
-              return data.get("addProjectV2ItemById", {}).get("item", {}).get("id", "")
-
-          def get_or_create_item(token, project_id, pull_request_node_id):
-              existing_item_id = find_existing_item(token, project_id, pull_request_node_id)
-              if existing_item_id:
-                  return existing_item_id, False
-              new_item_id = add_item(token, project_id, pull_request_node_id)
-              if not new_item_id:
-                  raise RuntimeError("Failed to add pull request to project")
-              return new_item_id, True
-
-          def update_single_select(token, project_id, item_id, field_id, option_id):
-              mutation = """
-              mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $optionId: String!) {
-                updateProjectV2ItemFieldValue(
-                  input: {
-                    projectId: $projectId
-                    itemId: $itemId
-                    fieldId: $fieldId
-                    value: {singleSelectOptionId: $optionId}
-                  }
-                ) {
-                  projectV2Item {
-                    id
-                  }
-                }
-              }
-              """
-              graphql(
-                  token,
-                  mutation,
-                  {
-                      "projectId": project_id,
-                      "itemId": item_id,
-                      "fieldId": field_id,
-                      "optionId": option_id,
-                  },
-              )
-
-          def update_text(token, project_id, item_id, field_id, value):
-              mutation = """
-              mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $value: String!) {
-                updateProjectV2ItemFieldValue(
-                  input: {
-                    projectId: $projectId
-                    itemId: $itemId
-                    fieldId: $fieldId
-                    value: {text: $value}
-                  }
-                ) {
-                  projectV2Item {
-                    id
-                  }
-                }
-              }
-              """
-              graphql(
-                  token,
-                  mutation,
-                  {
-                      "projectId": project_id,
-                      "itemId": item_id,
-                      "fieldId": field_id,
-                      "value": str(value),
-                  },
-              )
-
-          def normalize_project_number(project_value):
-              project_number_str = str(project_value).strip()
-              if project_number_str.startswith("[") and project_number_str.endswith("]"):
-                  project_number_str = project_number_str[1:-1].strip().strip("\"'")
-              if not project_number_str.isdigit():
-                  return None
-              return int(project_number_str)
-
-          def build_project_cache(token, mappings):
-              numbers = []
-              for mapping in mappings:
-                  project_value = mapping.get("project")
-                  if project_value is None:
-                      continue
-                  project_number = normalize_project_number(project_value)
-                  if project_number is not None and project_number not in numbers:
-                      numbers.append(project_number)
-
-              cache = {}
-              for project_number in numbers:
-                  cache[project_number] = get_project(token, project_number)
-              return cache
-
-          def validate_mappings(mappings, project_cache):
-              normalized = []
-              errors = []
-
-              for idx, mapping in enumerate(mappings, start=1):
-                  if not isinstance(mapping, dict):
-                      errors.append(f"Entry {idx}: each mapping must be an object/dictionary.")
-                      continue
-
-                  project_value = mapping.get("project")
-                  field_name = str(mapping.get("field", "")).strip()
-                  field_value = str(mapping.get("value", "")).strip()
-
-                  if project_value is None:
-                      errors.append(f"Entry {idx}: missing 'project'.")
-                      continue
-                  if not field_name:
-                      errors.append(f"Entry {idx}: missing 'field'.")
-                      continue
-                  if not field_value:
-                      errors.append(f"Entry {idx}: missing 'value'.")
-                      continue
-
-                  project_number = normalize_project_number(project_value)
-                  if project_number is None:
-                      errors.append(
-                          f"Entry {idx}: invalid project '{project_value}'. Use a numeric project number."
-                      )
-                      continue
-
-                  project = project_cache.get(project_number)
-                  if not project:
-                      errors.append(f"Entry {idx}: project #{project_number} was not found in {ORG}.")
-                      continue
-
-                  fields = project.get("fields", {}).get("nodes", [])
-                  target_field = None
-                  for field in fields:
-                      if str(field.get("name", "")).lower() == field_name.lower():
-                          target_field = field
-                          break
-
-                  if not target_field:
-                      errors.append(
-                          f"Entry {idx}: field '{field_name}' was not found in project #{project_number}."
-                      )
-                      continue
-
-                  field_id = target_field.get("id")
-                  data_type = str(target_field.get("dataType", "")).upper()
-                  options = target_field.get("options")
-
-                  option_id = ""
-                  if isinstance(options, list):
-                      for option in options:
-                          if str(option.get("name", "")).lower() == field_value.lower():
-                              option_id = option.get("id", "")
-                              break
-                      if not option_id:
-                          errors.append(
-                              f"Entry {idx}: value '{field_value}' not found in field '{field_name}' options."
-                          )
-                          continue
-
-                  normalized.append(
-                      {
-                          "index": idx,
-                          "project_number": project_number,
-                          "project": project,
-                          "field_name": field_name,
-                          "field_value": field_value,
-                          "field_id": field_id,
-                          "data_type": data_type,
-                          "single_select_option_id": option_id,
-                      }
-                  )
-
-              return normalized, errors
-
-          token = os.environ.get("GITHUB_TOKEN", "")
-          mappings = parse_project_field_values(os.environ.get("PROJECT_FIELD_VALUES", ""))
-          pull_request_node_id = get_pr_node_id(os.environ.get("PULL_REQUEST_NODE_ID", ""))
-
-          if not token:
-              print("Missing app token.")
-              sys.exit(1)
-
-          if not ORG:
-              print("Missing trusted organization name.")
-              sys.exit(1)
-
-          if not TARGET_REPOSITORY:
-              print("Missing repository input.")
-              sys.exit(1)
-
-          if not mappings:
-              print("No project field mappings were provided.")
-              sys.exit(1)
-
-          if not pull_request_node_id:
-              print("Unable to resolve pull request node id from input or event payload.")
-              sys.exit(1)
-
-          pr_org, pr_repo = get_pull_request_repository(token, pull_request_node_id)
-          if pr_org != ORG or pr_repo != TARGET_REPOSITORY:
-              print(
-                  "Pull request node id does not belong to the approved source repository "
-                  f"'{ORG}/{TARGET_REPOSITORY}'."
-              )
-              sys.exit(1)
-
-          project_cache = build_project_cache(token, mappings)
-          normalized_mappings, validation_errors = validate_mappings(mappings, project_cache)
-          if validation_errors:
-              print("Validation failed for project field mappings:")
-              for err in validation_errors:
-                  print(f"- {err}")
-              sys.exit(1)
-
-          for entry in normalized_mappings:
-              idx = entry["index"]
-              project_number = entry["project_number"]
-              project = entry["project"]
-              field_name = entry["field_name"]
-              field_value = entry["field_value"]
-              field_id = entry["field_id"]
-              option_id = entry["single_select_option_id"]
-
-              project_id = project["id"]
-              item_id, created = get_or_create_item(token, project_id, pull_request_node_id)
-
-              if option_id:
-                  update_single_select(token, project_id, item_id, field_id, option_id)
-              else:
-                  update_text(token, project_id, item_id, field_id, field_value)
-
-              state = "added" if created else "already present"
-              print(
-                  f"Entry {idx}: pull request {state} in project #{project_number} and field "
-                  f"'{field_name}' set to '{field_value}'."
-              )
+          curl -sS -L --fail-with-body \
+            -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            https://api.github.com/repos/datasciencecampus/github-actions/actions/workflows/add-pr-to-projects-impl.yml/dispatches \
+            -d @payload.json

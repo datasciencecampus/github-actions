@@ -1,4 +1,4 @@
-name: Test Add Pull Request To Projects
+name: Test Add Pull Request To Projects Reusable Workflow
 
 'on':
   pull_request:
@@ -20,7 +20,7 @@ permissions:
   contents: read
 
 jobs:
-  test-add-pr-to-projects:
+  test-add-pr-to-projects-reusable:
     uses: ./.github/workflows/add-pr-to-projects.yml
     secrets:
       PROJECT_ROUTER_BOT_PRIVATE_KEY: ${{ secrets.PROJECT_ROUTER_BOT_PRIVATE_KEY }}

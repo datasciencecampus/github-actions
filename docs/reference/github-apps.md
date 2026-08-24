@@ -6,10 +6,8 @@ This repository uses two GitHub Apps with distinct responsibilities and permissi
 
 **Purpose:** Allows other repositories in the org to trigger workflows in this repository.
 
-**Credentials (org-level, available to repositories across the organisation):**
-
 - `PROJECT_ROUTER_BOT_APP_ID`: Actions variable.
-- `PROJECT_ROUTER_BOT_PEM`: Actions secret.
+- `PROJECT_ROUTER_BOT_PRIVATE_KEY`: Actions secret.
 
 **Installation scope:** `datasciencecampus/github-actions` only.
 
@@ -31,10 +29,8 @@ for why `workflow_dispatch` was chosen over `repository_dispatch`.
 
 **Purpose:** Manages ProjectsV2 boards on behalf of the org — adds items and sets field values.
 
-**Credentials (stored in this repository's `project-automation` environment):**
-
 - `PROJECT_HANDLER_BOT_APP_ID`: Actions variable.
-- `PROJECT_HANDLER_BOT_PEM`: Actions secret.
+- `PROJECT_HANDLER_BOT_PRIVATE_KEY`: Actions secret.
 
 **Installation scope:** `datasciencecampus` organisation.
 
@@ -51,6 +47,6 @@ for why `workflow_dispatch` was chosen over `repository_dispatch`.
 - `issues: read` is required for the GraphQL API to resolve an issue node ID when
   adding it to a project.
 
-**Used in:** `add-pr-to-projects.yml` and `add-issue-to-projects.yml` (internal to this repo — callers do not need these credentials).
+**Used in:** `add-pr-to-projects-impl.yml` and `add-issue-to-projects-impl.yml` (internal to this repo — callers do not need these credentials).
 
 The workflows only mint a project-handler token for repositories within the `datasciencecampus` organisation, and they verify that the submitted issue or pull request node ID resolves back to the repository named in the request.
