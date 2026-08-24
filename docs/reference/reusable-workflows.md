@@ -21,7 +21,7 @@ Workflow file: `.github/workflows/add-issue-to-projects.yml`
 
 ### Issue Call Inputs
 
-- `implementation_ref`: optional. Branch or tag ref to use when dispatching `.github/workflows/add-issue-to-projects-impl.yml`.
+- `implementation_ref`: optional override. Branch or tag ref to use when dispatching `.github/workflows/add-issue-to-projects-impl.yml`.
 - `repository`: required. Source repository name.
 - `issue_node_id`: required. Node ID of the issue to add.
 - `project_field_values`: required. JSON array of project mappings.
@@ -37,7 +37,7 @@ Workflow file: `.github/workflows/add-issue-to-projects.yml`
 
 - This is the public reusable workflow for the issue flow.
 - It defaults to dispatching the same branch or tag ref the reusable workflow itself was invoked from, which keeps release-tag callers pinned to matching implementation code.
-- When callers pin the reusable workflow by commit SHA, set `implementation_ref` explicitly to a branch or tag.
+- When callers pin by commit SHA, the workflow reads `configs/implementation-ref.json` from its pinned revision to choose the dispatch ref. Use `implementation_ref` only to override that metadata.
 - It is most useful for workflows in this repository, or same-organization callers that intentionally expose the router-bot secret to the called workflow.
 
 ## add-issue-to-projects-impl
@@ -88,7 +88,7 @@ Workflow file: `.github/workflows/add-pr-to-projects.yml`
 
 ### Pull Request Call Inputs
 
-- `implementation_ref`: optional. Branch or tag ref to use when dispatching `.github/workflows/add-pr-to-projects-impl.yml`.
+- `implementation_ref`: optional override. Branch or tag ref to use when dispatching `.github/workflows/add-pr-to-projects-impl.yml`.
 - `repository`: required. Source repository name.
 - `pull_request_node_id`: required. Node ID of the pull request to add.
 - `project_field_values`: required. JSON array of project mappings.
@@ -104,7 +104,7 @@ Workflow file: `.github/workflows/add-pr-to-projects.yml`
 
 - This is the public reusable workflow for the pull request flow.
 - It defaults to dispatching the same branch or tag ref the reusable workflow itself was invoked from, which keeps release-tag callers pinned to matching implementation code.
-- When callers pin the reusable workflow by commit SHA, set `implementation_ref` explicitly to a branch or tag.
+- When callers pin by commit SHA, the workflow reads `configs/implementation-ref.json` from its pinned revision to choose the dispatch ref. Use `implementation_ref` only to override that metadata.
 
 ## add-pr-to-projects-impl
 

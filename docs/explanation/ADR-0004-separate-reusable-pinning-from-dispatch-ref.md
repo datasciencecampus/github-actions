@@ -38,11 +38,11 @@ Separate the reusable workflow revision from the internal dispatch ref.
 In practice:
 
 - Callers may pin the public reusable workflow by commit SHA in `uses:`.
-- Public reusable workflows accept an optional `implementation_ref` input.
-- `implementation_ref` must be a branch or tag name that can be used with
-  `workflow_dispatch`.
+- Public reusable workflows accept an optional `implementation_ref` override.
 - If `implementation_ref` is omitted, the public reusable workflow derives the
-  dispatch ref from `github.workflow_ref`.
+   dispatch ref from `github.workflow_ref` when that is already a branch or tag.
+- If the reusable workflow was pinned by commit SHA, it reads a release-managed
+   metadata file from that pinned workflow revision.
 
 Example caller:
 
@@ -53,7 +53,6 @@ jobs:
     secrets:
       PROJECT_ROUTER_BOT_PRIVATE_KEY: ${{ secrets.PROJECT_ROUTER_BOT_PRIVATE_KEY }}
     with:
-      implementation_ref: v1.0.1
       repository: ${{ github.event.repository.name }}
       issue_node_id: ${{ github.event.issue.node_id }}
       project_field_values: '[{"project":194}]'
@@ -67,36 +66,32 @@ jobs:
 
 2. **Preserves compatibility with `workflow_dispatch` constraints**
    The internal implementation still runs through `workflow_dispatch`, which needs a
-   branch or tag ref. `implementation_ref` makes that requirement explicit instead of
-   hiding it behind brittle inference.
+   branch or tag ref. The pinned workflow revision carries the intended dispatch
+   ref as explicit metadata, and callers can still override it explicitly when
+   needed.
 
-3. **Separates public contract from internal transport details**
-   The caller states two distinct things: which reusable workflow revision to trust,
-   and which implementation release line to dispatch. This is clearer than a single
-   overloaded `ref` value that tries to mean both.
+3. **Keeps a simple default for SHA-pinned callers**
+   Most callers no longer need to carry a second version field. The dispatch ref
+   lives in the pinned workflow revision itself.
 
-4. **Provides a sensible default for tag- and branch-pinned callers**
+4. **Provides a sensible default for tag-, branch-, and SHA-pinned callers**
    Callers pinned to a tag or branch do not need extra configuration. The public
-   reusable workflow can derive the same branch or tag from `github.workflow_ref`
-   and dispatch the matching internal implementation.
-
-5. **Works cleanly with release automation**
-   Documentation and examples can auto-update `implementation_ref` through
-   release-please without changing the caller's choice of SHA pinning strategy.
+   reusable workflow can derive the same branch or tag from `github.workflow_ref`,
+   and SHA-pinned callers use metadata updated by release-please.
 
 ## Consequences
 
 Positive:
 
-- SHA-pinned consumers are supported without changing the internal dispatch model.
-- The dispatch ref is explicit and audit-friendly when callers need SHA pinning.
+- SHA-pinned consumers usually do not need a second version input.
+- The dispatch ref is explicit and audit-friendly for the pinned workflow revision.
 - Branch- and tag-pinned consumers keep a simple default path.
 
 Negative:
 
-- Callers that pin by commit SHA must provide one additional input.
-- Two versioning concepts now exist in caller configuration: workflow SHA and
-  implementation branch/tag.
+- The dispatch ref metadata must be kept correct as part of the release process.
+- Two versioning concepts can still exist in caller configuration when a caller
+   chooses to override the dispatch target explicitly.
 - Misconfigured `implementation_ref` values still fail at dispatch time if the
   named branch or tag does not exist.
 
@@ -106,15 +101,19 @@ Negative:
    Rejected because a commit SHA is not a valid `workflow_dispatch` ref and cannot be
    reliably reverse-mapped to the intended release tag or branch.
 
-2. Require all callers to pin by tag instead of commit SHA
+2. Store the dispatch ref as release-managed metadata in the workflow repository
+   Accepted because it keeps the dispatch ref aligned with the pinned workflow
+   revision and avoids Dependabot drift.
+
+3. Require all callers to pin by tag instead of commit SHA
    Rejected because some organization policies require immutable SHA pinning for
    third-party or cross-repository workflow usage.
 
-3. Remove the internal `workflow_dispatch` hop and execute all logic directly in the
+4. Remove the internal `workflow_dispatch` hop and execute all logic directly in the
    public reusable workflow
    Rejected because the current split preserves the privileged implementation
    boundary and keeps router concerns separate from project-mutation concerns.
 
-4. Keep a generic `ref` input on the public reusable workflow
+5. Keep a generic `ref` input on the public reusable workflow
    Rejected because it overloads two different meanings: reusable workflow revision
    and implementation dispatch target. `implementation_ref` is narrower and clearer.

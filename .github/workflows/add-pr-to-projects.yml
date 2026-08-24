@@ -41,10 +41,21 @@ jobs:
         env:
           IMPLEMENTATION_REF: ${{ inputs.implementation_ref }}
           WORKFLOW_REF: ${{ github.workflow_ref }}
+          WORKFLOW_SHA: ${{ job.workflow_sha || github.workflow_sha }}
+          WORKFLOW_REPOSITORY: ${{ job.workflow_repository || github.repository }}
+          API_TOKEN: ${{ github.token }}
           PULL_REQUEST_HEAD_REF: ${{ github.event.pull_request.head.ref || github.head_ref }}
           TARGET_REPOSITORY: ${{ inputs.repository }}
           PULL_REQUEST_NODE_ID: ${{ inputs.pull_request_node_id }}
         run: |
+          resolve_ref_from_metadata() {
+            curl -sS -L --fail-with-body \
+              -H "Accept: application/vnd.github.raw+json" \
+              -H "Authorization: Bearer ${API_TOKEN}" \
+              "https://api.github.com/repos/${WORKFLOW_REPOSITORY}/contents/configs/implementation-ref.json?ref=${WORKFLOW_SHA}" \
+              | jq -r '.implementation_ref // empty'
+          }
+
           ref="$IMPLEMENTATION_REF"
 
           if [ -z "$ref" ]; then
@@ -60,6 +71,10 @@ jobs:
                 ref="$PULL_REQUEST_HEAD_REF"
                 ;;
             esac
+          fi
+
+          if [ -z "$ref" ] || printf '%s\n' "$ref" | grep -Eq '^[0-9a-f]{40}$'; then
+            ref="$(resolve_ref_from_metadata)"
           fi
 
           if [ -z "$ref" ] || [ "$ref" = "$WORKFLOW_REF" ]; then

@@ -36,13 +36,12 @@ jobs:
     secrets:
       PROJECT_ROUTER_BOT_PRIVATE_KEY: ${{ secrets.PROJECT_ROUTER_BOT_PRIVATE_KEY }}
     with:
-      implementation_ref: v1.1.0 # x-release-please-version
       repository: ${{ github.event.repository.name }}
       pull_request_node_id: ${{ github.event.pull_request.node_id }}
       project_field_values: '[{"project":194,"field":"Status","value":"Review"}]'
 ```
 
-If your organisation requires SHA pinning, pin the reusable workflow with `@<commit-sha>` and set `implementation_ref` to the branch or tag that should be dispatched internally.
+If your organisation requires SHA pinning, pin the reusable workflow with `@<commit-sha>` and omit `implementation_ref` unless you need to override the dispatch ref recorded in the pinned workflow revision.
 
 ## Input format
 

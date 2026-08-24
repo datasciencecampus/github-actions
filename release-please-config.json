@@ -10,11 +10,7 @@
       "extra-files": [
         {
           "type": "generic",
-          "path": "docs/how-to/use-add-issue-to-projects-workflow.md"
-        },
-        {
-          "type": "generic",
-          "path": "docs/how-to/use-add-pr-to-projects-workflow.md"
+          "path": "configs/implementation-ref.json"
         }
       ]
     }
