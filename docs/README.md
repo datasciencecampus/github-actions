@@ -8,7 +8,6 @@ Keep docs short and practical.
 - `docs/how-to/`: task steps
 - `docs/reference/`: facts, inputs, outputs
 - `docs/explanation/`: rationale and trade-offs
-- `docs/PIRR.md`: internal visibility rationale record
 
 ## Pages
 
