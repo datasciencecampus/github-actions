@@ -30,6 +30,16 @@ Run checks before opening a PR:
 
 - `pre-commit run --all-files`
 
+Install the hooks locally, including the commit message hook:
+
+- `pre-commit install --hook-type pre-commit --hook-type commit-msg`
+
+Commit messages must follow the Conventional Commits format, for example:
+
+- `feat: add project routing workflow`
+- `fix: validate repository ownership before dispatch`
+- `docs: clarify workflow prerequisites`
+
 ## Pull request guidance
 
 - Link the issue in your PR description.
