@@ -1,0 +1,26 @@
+name: Zizmor
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/**"
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  zizmor:
+    name: Zizmor
+    permissions:
+      contents: read
+      actions: read
+    uses: ONSdigital/ons-github-actions/.github/workflows/zizmor.yml@main
+    with:
+      advanced-security: false
