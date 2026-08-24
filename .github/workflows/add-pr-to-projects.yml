@@ -3,10 +3,6 @@ name: Add Pull Request To Projects
 'on':
   workflow_call:
     inputs:
-      ref:
-        description: Git ref in this repository to dispatch. Defaults to the commit SHA of this reusable workflow.
-        required: false
-        type: string
       repository:
         description: Repository name the pull request belongs to.
         required: true
@@ -39,14 +35,31 @@ jobs:
     steps:
       - name: Validate dispatch inputs
         env:
-          REF: ${{ inputs.ref || github.workflow_sha }}
+          WORKFLOW_REF: ${{ github.workflow_ref }}
           TARGET_REPOSITORY: ${{ inputs.repository }}
           PULL_REQUEST_NODE_ID: ${{ inputs.pull_request_node_id }}
         run: |
-          if [ -z "$REF" ]; then
-            echo "Missing ref input."
+          ref="${WORKFLOW_REF##*@}"
+          case "$ref" in
+            refs/heads/*)
+              ref="${ref#refs/heads/}"
+              ;;
+            refs/tags/*)
+              ref="${ref#refs/tags/}"
+              ;;
+          esac
+
+          if [ -z "$ref" ] || [ "$ref" = "$WORKFLOW_REF" ]; then
+            echo "Unable to resolve a dispatchable workflow ref from '$WORKFLOW_REF'."
             exit 1
           fi
+
+          if [ -z "$ref" ]; then
+            echo "Missing dispatch ref."
+            exit 1
+          fi
+
+          echo "REF=$ref" >> "$GITHUB_ENV"
 
           if [ -z "$TARGET_REPOSITORY" ]; then
             echo "Missing repository input."
@@ -86,7 +99,6 @@ jobs:
       - name: Dispatch add-pr-to-projects implementation workflow
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
-          REF: ${{ inputs.ref || github.workflow_sha }}
           REPOSITORY_NAME: ${{ inputs.repository }}
           PULL_REQUEST_NODE_ID: ${{ inputs.pull_request_node_id }}
           PROJECT_FIELD_VALUES: ${{ inputs.project_field_values }}
