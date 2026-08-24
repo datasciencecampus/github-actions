@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.0.0](https://github.com/datasciencecampus/github-actions/compare/v0.2.0...v1.0.0) (2026-08-24)
+
+
+### ⚠ BREAKING CHANGES
+
+* **workflows:** callers must use add-issue-to-projects.yml and add-pr-to-projects.yml; the legacy call-add-* workflow files were removed.
+
+### Code Refactoring
+
+* **workflows:** Refactor GitHub Actions workflows for adding issues and pull requests to projects ([4436eb1](https://github.com/datasciencecampus/github-actions/commit/4436eb1c2ee7a983b04e8e1cfa9d1c5ee746b03f))
+
 ## [0.2.0](https://github.com/datasciencecampus/github-actions/compare/v0.1.0...v0.2.0) (2026-08-24)
 
 
