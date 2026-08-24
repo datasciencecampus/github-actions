@@ -1,0 +1,29 @@
+name: Test Add Pull Request To Projects
+
+'on':
+  pull_request:
+    types: [opened]
+  workflow_dispatch:
+    inputs:
+      project_field_values:
+        description: >-
+          JSON list of mappings, for example
+          [{"project":194,"field":"Status","value":"In review"}]
+        required: false
+        type: string
+      pull_request_node_id:
+        description: Optional pull request node id for manual tests.
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  pull-requests: read
+  repository-projects: write
+
+jobs:
+  test-add-pr-to-projects:
+    uses: ./.github/workflows/add-pr-to-projects.yml
+    with:
+      project_field_values: ${{ inputs.project_field_values || vars.TEST_PR_PROJECT_FIELD_VALUES || '[{"project":194,"field":"Status","value":"In review"}]' }}
+      pull_request_node_id: ${{ inputs.pull_request_node_id || github.event.pull_request.node_id || '' }}
