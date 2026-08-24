@@ -12,8 +12,6 @@ Same organisation-level credentials as `add-pr-to-projects` — see [Prerequisit
 
 The project-handling credentials are stored in this repository and require no action from callers.
 
-Your repository must also be added to the central allowlist in this repository, and each project number you intend to target must be approved for that repository. Use the access request form in [.github/ISSUE_TEMPLATE/request-github-token-access.yml](../../.github/ISSUE_TEMPLATE/request-github-token-access.yml) when onboarding a new repository or project.
-
 ## Add to your repository
 
 Create `.github/workflows/add-issue-to-projects.yml` in your repository with the following content.
@@ -106,8 +104,7 @@ Your project number appears in the URL of the project board:
 
 Before the issue is added to a project, the central workflow will:
 
-1. Refuse requests from repositories that are not on the central allowlist.
-2. Refuse project numbers that are not approved for the calling repository.
-3. Verify that the submitted issue node ID resolves to the approved repository.
+1. Verify that the submitted issue node ID resolves to the named repository.
+2. Refuse requests that claim an organization other than `datasciencecampus`.
 
 These checks are enforced in the called workflow, so changing the caller YAML does not bypass them.

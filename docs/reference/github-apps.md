@@ -6,7 +6,7 @@ This repository uses two GitHub Apps with distinct responsibilities and permissi
 
 **Purpose:** Allows other repositories in the org to trigger workflows in this repository.
 
-**Credentials (org-level, granted only to approved repositories):**
+**Credentials (org-level, available to repositories across the organisation):**
 
 - `PROJECT_ROUTER_BOT_APP_ID`: Actions variable.
 - `PROJECT_ROUTER_BOT_PEM`: Actions secret.
@@ -23,7 +23,7 @@ The `actions: write` permission is the minimum required to call
 [ADR-0002](../explanation/ADR-0002-workflow-dispatch-over-repository-dispatch.md)
 for why `workflow_dispatch` was chosen over `repository_dispatch`.
 
-**Used in:** caller workflows in approved repositories (see how-to guides).
+**Used in:** caller workflows in repositories across the organisation (see how-to guides).
 
 ---
 
@@ -53,14 +53,4 @@ for why `workflow_dispatch` was chosen over `repository_dispatch`.
 
 **Used in:** `add-pr-to-projects.yml` and `add-issue-to-projects.yml` (internal to this repo — callers do not need these credentials).
 
-## Central authorization variables
-
-The `project-automation` environment in this repository must define the following variables:
-
-- `PROJECT_ROUTER_ALLOWED_REPOSITORIES`: JSON array of repositories allowed to dispatch project-routing workflows, for example `[
-"repo-a",
-"repo-b"
-]`.
-- `PROJECT_ROUTER_ALLOWED_PROJECTS`: JSON object mapping repository name to approved project numbers, for example `{"repo-a":[194],"repo-b":[205,206]}`.
-
-The workflows refuse to mint a project-handler token unless the requested repository is in the repository allowlist, every requested project number is approved for that repository, and the submitted issue or pull request node ID resolves back to that repository.
+The workflows only mint a project-handler token for repositories within the `datasciencecampus` organisation, and they verify that the submitted issue or pull request node ID resolves back to the repository named in the request.

@@ -49,57 +49,13 @@ jobs:
 
       - name: Validate dispatch scope
         env:
-          PROJECT_FIELD_VALUES: ${{ inputs.project_field_values }}
           REQUESTED_ORGANIZATION: ${{ inputs.organization }}
           TARGET_REPOSITORY: ${{ inputs.repository }}
           TRUSTED_ORGANIZATION: ${{ github.repository_owner }}
-          PROJECT_ROUTER_ALLOWED_REPOSITORIES: ${{ vars.PROJECT_ROUTER_ALLOWED_REPOSITORIES }}
-          PROJECT_ROUTER_ALLOWED_PROJECTS: ${{ vars.PROJECT_ROUTER_ALLOWED_PROJECTS }}
         shell: python
         run: |
-          import json
           import os
           import sys
-
-          def parse_string_list(raw):
-              raw = (raw or "").strip()
-              if not raw:
-                  return []
-
-              try:
-                  parsed = json.loads(raw)
-              except Exception:
-                  parsed = None
-
-              if isinstance(parsed, list):
-                  return [str(item).strip() for item in parsed if str(item).strip()]
-
-              return [item.strip() for item in raw.split(",") if item.strip()]
-
-          def parse_project_mappings(raw):
-              raw = (raw or "").strip()
-              if not raw:
-                  return []
-
-              try:
-                  parsed = json.loads(raw)
-              except Exception as exc:
-                  raise RuntimeError(
-                      "PROJECT_FIELD_VALUES must be valid JSON for authorization checks."
-                  ) from exc
-
-              if isinstance(parsed, dict):
-                  return [parsed]
-              if isinstance(parsed, list):
-                  return parsed
-
-              raise RuntimeError("PROJECT_FIELD_VALUES must be a JSON object or array.")
-
-          def normalize_project_number(project_value):
-              project_number = str(project_value).strip()
-              if not project_number.isdigit():
-                  return None
-              return int(project_number)
 
           trusted_org = os.environ.get("TRUSTED_ORGANIZATION", "").strip()
           requested_org = os.environ.get("REQUESTED_ORGANIZATION", "").strip()
@@ -112,72 +68,6 @@ jobs:
           if requested_org and requested_org != trusted_org:
               print(f"Invalid organization '{requested_org}'. Only '{trusted_org}' is allowed.")
               sys.exit(1)
-
-          allowed_repositories = parse_string_list(
-              os.environ.get("PROJECT_ROUTER_ALLOWED_REPOSITORIES", "")
-          )
-          if not allowed_repositories:
-              print(
-                  "Missing variable PROJECT_ROUTER_ALLOWED_REPOSITORIES in the project-automation environment."
-              )
-              sys.exit(1)
-
-          if target_repo not in allowed_repositories:
-              print(f"Repository '{target_repo}' is not approved to use this workflow.")
-              sys.exit(1)
-
-          raw_allowed_projects = os.environ.get("PROJECT_ROUTER_ALLOWED_PROJECTS", "").strip()
-          if not raw_allowed_projects:
-              print(
-                  "Missing variable PROJECT_ROUTER_ALLOWED_PROJECTS in the project-automation environment."
-              )
-              sys.exit(1)
-
-          try:
-              allowed_projects_map = json.loads(raw_allowed_projects)
-          except Exception as exc:
-              raise RuntimeError(
-                  "PROJECT_ROUTER_ALLOWED_PROJECTS must be valid JSON."
-              ) from exc
-
-          if not isinstance(allowed_projects_map, dict):
-              raise RuntimeError("PROJECT_ROUTER_ALLOWED_PROJECTS must be a JSON object.")
-
-          allowed_project_values = allowed_projects_map.get(target_repo, allowed_projects_map.get("*"))
-          if not isinstance(allowed_project_values, list) or not allowed_project_values:
-              print(f"Repository '{target_repo}' does not have any approved project mappings.")
-              sys.exit(1)
-
-          allowed_projects = {
-              normalize_project_number(value)
-              for value in allowed_project_values
-              if normalize_project_number(value) is not None
-          }
-          if not allowed_projects:
-              raise RuntimeError(
-                  f"Repository '{target_repo}' has an invalid project allowlist entry."
-              )
-
-          mappings = parse_project_mappings(os.environ.get("PROJECT_FIELD_VALUES", ""))
-          if not mappings:
-              print("No project field mappings were provided.")
-              sys.exit(1)
-
-          for idx, mapping in enumerate(mappings, start=1):
-              if not isinstance(mapping, dict):
-                  print(f"Entry {idx}: each mapping must be an object/dictionary.")
-                  sys.exit(1)
-              project_number = normalize_project_number(mapping.get("project"))
-              if project_number is None:
-                  print(
-                      f"Entry {idx}: invalid project '{mapping.get('project')}'. Use a numeric project number."
-                  )
-                  sys.exit(1)
-              if project_number not in allowed_projects:
-                  print(
-                      f"Entry {idx}: project #{project_number} is not approved for repository '{target_repo}'."
-                  )
-                  sys.exit(1)
 
       - name: Create GitHub App token
         id: app-token
