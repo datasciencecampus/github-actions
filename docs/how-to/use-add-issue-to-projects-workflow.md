@@ -1,58 +1,105 @@
-# Use add-issue-to-projects via repository_dispatch
+# Use add-issue-to-projects
 
-Use this workflow when you want newly opened issues to be added to one or more `datasciencecampus` Projects.
+Adds an issue to one or more `datasciencecampus` ProjectsV2 boards and optionally sets a field value (for example `Status = Backlog`).
 
-Workflow:
+If no field is specified, the issue is added to the project without any field update — useful for simple triage boards.
 
-- `.github/workflows/add-issue-to-projects.yml` in this repository
+Workflow: `.github/workflows/add-issue-to-projects.yml`
 
 ## Prerequisites
 
-1. The caller can send `repository_dispatch` to `datasciencecampus/github-actions`.
-2. Organization credentials are available to this workflow:
+Same organisation-level credentials as `add-pr-to-projects` — see [Prerequisites](use-add-pr-to-projects-workflow.md#prerequisites).
 
-- `PROJECT_HANDLER_BOT_APP_ID` (variable)
-- `PROJECT_HANDLER_BOT_PEM` (secret)
+## Add to your repository
 
-3. Project numbers already exist in the `datasciencecampus` org.
+Create `.github/workflows/add-issue-to-projects.yml` in your repository with the following content.
+Replace the `project_field_values` string with your own configuration (see [Input format](#input-format) below).
 
-## Trigger this repo via repository_dispatch
+```yaml
+name: Add Issue To Projects
 
-Use this repository's test workflow for manual dispatch checks:
+on:
+  issues:
+    types: [opened, reopened]
 
-- `.github/workflows/test-add-issue-to-projects.yml`
+permissions:
+  contents: read
+
+jobs:
+  add-issue-to-projects:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create GitHub App token for dispatch
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ vars.PROJECT_ROUTER_BOT_APP_ID }}
+          private-key: ${{ secrets.PROJECT_ROUTER_BOT_PEM }}
+          owner: datasciencecampus
+          repositories: github-actions
+          permission-actions: write
+
+      - name: Dispatch add-issue-to-projects workflow
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          PROJECT_FIELD_VALUES: '[{"project":194}]'
+          ISSUE_NODE_ID: ${{ github.event.issue.node_id }}
+          REPOSITORY_NAME: ${{ github.event.repository.name }}
+          REF: ${{ github.ref_name }}
+        run: |
+          jq -n \
+            --arg ref "$REF" \
+            --arg repo "$REPOSITORY_NAME" \
+            --arg node_id "$ISSUE_NODE_ID" \
+            --arg project_field_values "$PROJECT_FIELD_VALUES" \
+            '{
+              ref: $ref,
+              inputs: {
+                repository: $repo,
+                issue_node_id: $node_id,
+                project_field_values: $project_field_values
+              }
+            }' | curl -sS -L --fail-with-body \
+              -X POST \
+              -H "Accept: application/vnd.github+json" \
+              -H "Authorization: Bearer ${GH_TOKEN}" \
+              https://api.github.com/repos/datasciencecampus/github-actions/actions/workflows/add-issue-to-projects.yml/dispatches \
+              -d @-
+```
 
 ## Input format
 
-- `project_numbers` accepts comma-separated values or newline-separated values.
-- Only numeric project numbers are allowed.
+`project_field_values` is a JSON array. Each entry must have a `project` number. `field` and `value` are optional — if omitted, the issue is added without any field update.
 
-Examples:
+| Key | Required | Description |
+|-----|----------|-------------|
+| `project` | Yes | Numeric project number |
+| `field` | No | Field name in the project |
+| `value` | No (required if `field` given) | Value to set for that field |
 
-- `194,205`
-- multiline block with one project number per line
+Example — add to project with no field update:
 
-## Trigger this repo via repository_dispatch
-
-If you want execution to happen in `datasciencecampus/github-actions` (for example to use its environment secrets), trigger this workflow with a repository dispatch event.
-
-Example using GitHub CLI:
-
-```bash
-gh api \
-  --method POST \
-  -H "Accept: application/vnd.github+json" \
-  /repos/datasciencecampus/github-actions/dispatches \
-  -f event_type='add-issue-to-projects' \
-  -f client_payload='{
-    "repository":"my-caller-repo",
-    "issue_node_id":"I_kwDOExample",
-    "project_numbers":"194,205"
-  }'
+```json
+[{"project":194}]
 ```
 
-Dispatch payload fields:
+Example — add to project and set Status:
 
-- `project_numbers` (required): comma-separated or newline-separated project numbers
-- `issue_node_id` (required): issue node id
-- `repository` (optional): source repository name for token scoping
+```json
+[{"project":194,"field":"Status","value":"Backlog"}]
+```
+
+Example — two projects, one with a field update:
+
+```json
+[
+  {"project":194},
+  {"project":205,"field":"Priority","value":"Medium"}
+]
+```
+
+## Finding your project number
+
+Your project number appears in the URL of the project board:
+`https://github.com/orgs/datasciencecampus/projects/194` → project number is `194`.
+

@@ -1,93 +1,106 @@
-# Use add-pr-to-projects via repository_dispatch
+# Use add-pr-to-projects
 
-Use this workflow when a pull request is opened and you want to add it to one or more `datasciencecampus` Projects, then set a field value (for example `Status = Review`).
+Adds a pull request to one or more `datasciencecampus` ProjectsV2 boards and sets a field value (for example `Status = Review`).
 
-Workflow:
-
-- `.github/workflows/add-pr-to-projects.yml` in this repository
+Workflow: `.github/workflows/add-pr-to-projects.yml`
 
 ## Prerequisites
 
-1. The caller can send `repository_dispatch` to `datasciencecampus/github-actions`.
-2. Organization credentials are available to this workflow:
+The following must be available as **organisation-level** Actions variables and secrets (they are granted to all repos in the org automatically):
 
-- `PROJECT_HANDLER_BOT_APP_ID` (variable)
-- `PROJECT_HANDLER_BOT_PEM` (secret)
+| Name | Type | Purpose |
+|------|------|---------|
+| `PROJECT_ROUTER_BOT_APP_ID` | Variable | Client ID of the app that triggers the workflow |
+| `PROJECT_ROUTER_BOT_PEM` | Secret | Private key of the app that triggers the workflow |
+| `PROJECT_HANDLER_BOT_APP_ID` | Variable | Client ID of the app that manages projects |
+| `PROJECT_HANDLER_BOT_PEM` | Secret | Private key of the app that manages projects |
 
-3. Each target project and field exists in `datasciencecampus` Projects.
+Both apps are already installed for the `datasciencecampus` org — you do not need to create them.
 
-## Trigger this repo via repository_dispatch
+## Add to your repository
 
-If you want execution to happen in `datasciencecampus/github-actions` (for example to use its environment secrets), trigger this workflow with a repository dispatch event.
-
-Example using GitHub CLI:
-
-```bash
-gh api \
-  --method POST \
-  -H "Accept: application/vnd.github+json" \
-  /repos/datasciencecampus/github-actions/dispatches \
-  -f event_type='add-pr-to-projects' \
-  -f client_payload='{
-    "repository":"my-caller-repo",
-    "pull_request_node_id":"PR_kwDOExample",
-    "project_field_values":"[{\"project\":194,\"field\":\"Status\",\"value\":\"Review\"}]"
-  }'
-```
-
-Create a workflow in your repository to send the dispatch event:
+Create `.github/workflows/add-pr-to-projects.yml` in your repository with the following content.
+Replace the `project_field_values` string with your own configuration (see [Input format](#input-format) below).
 
 ```yaml
-name: Dispatch add-pr-to-projects
+name: Add Pull Request To Projects
 
 on:
   pull_request:
-    types: [opened]
+    types: [opened, reopened]
 
 permissions:
   contents: read
 
 jobs:
-  dispatch:
+  add-pr-to-projects:
     runs-on: ubuntu-latest
     steps:
-      - name: Send repository_dispatch
+      - name: Create GitHub App token for dispatch
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ vars.PROJECT_ROUTER_BOT_APP_ID }}
+          private-key: ${{ secrets.PROJECT_ROUTER_BOT_PEM }}
+          owner: datasciencecampus
+          repositories: github-actions
+          permission-actions: write
+
+      - name: Dispatch add-pr-to-projects workflow
         env:
-          DISPATCH_TOKEN: ${{ secrets.GH_ACTIONS_DISPATCH_TOKEN }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          PROJECT_FIELD_VALUES: '[{"project":194,"field":"Status","value":"Review"}]'
+          PULL_REQUEST_NODE_ID: ${{ github.event.pull_request.node_id }}
+          REPOSITORY_NAME: ${{ github.event.repository.name }}
+          REF: ${{ github.head_ref }}
         run: |
-          curl -sS -L \
-            -X POST \
-            -H "Accept: application/vnd.github+json" \
-            -H "Authorization: Bearer ${DISPATCH_TOKEN}" \
-            https://api.github.com/repos/datasciencecampus/github-actions/dispatches \
-            -d @- <<'JSON'
-          {
-            "event_type": "add-pr-to-projects",
-            "client_payload": {
-              "repository": "${{ github.event.repository.name }}",
-              "pull_request_node_id": "${{ github.event.pull_request.node_id }}",
-              "project_field_values": "[{\"project\":194,\"field\":\"Status\",\"value\":\"Review\"}]"
-            }
-          }
-          JSON
+          jq -n \
+            --arg ref "$REF" \
+            --arg repo "$REPOSITORY_NAME" \
+            --arg node_id "$PULL_REQUEST_NODE_ID" \
+            --arg project_field_values "$PROJECT_FIELD_VALUES" \
+            '{
+              ref: $ref,
+              inputs: {
+                repository: $repo,
+                pull_request_node_id: $node_id,
+                project_field_values: $project_field_values
+              }
+            }' | curl -sS -L --fail-with-body \
+              -X POST \
+              -H "Accept: application/vnd.github+json" \
+              -H "Authorization: Bearer ${GH_TOKEN}" \
+              https://api.github.com/repos/datasciencecampus/github-actions/actions/workflows/add-pr-to-projects.yml/dispatches \
+              -d @-
 ```
 
-## Mapping input
+## Input format
 
-Pass a list of dictionaries in `project_field_values`.
+`project_field_values` is a JSON array. Each entry must have a `project` number, `field`, and `value`:
 
-Each entry should include:
+| Key | Required | Description |
+|-----|----------|-------------|
+| `project` | Yes | Numeric project number |
+| `field` | Yes | Field name in the project |
+| `value` | Yes | Value to set for that field |
 
-- `project`: numeric project number
-- `field`: project field name
-- `value`: value to set for that field
+Example — set Status to Review on project 194:
 
-Example entry:
+```json
+[{"project":194,"field":"Status","value":"Review"}]
+```
 
-- `{"project": 194, "field": "Status", "value": "Review"}`
+Example — set fields on two projects:
 
-Dispatch payload fields:
+```json
+[
+  {"project":194,"field":"Status","value":"Review"},
+  {"project":205,"field":"Priority","value":"High"}
+]
+```
 
-- `project_field_values` (required): JSON string list of mappings
-- `pull_request_node_id` (required): pull request node id
-- `repository` (optional): source repository name for token scoping
+## Finding your project number
+
+Your project number appears in the URL of the project board:
+`https://github.com/orgs/datasciencecampus/projects/194` → project number is `194`.
+
