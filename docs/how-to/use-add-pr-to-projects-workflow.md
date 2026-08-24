@@ -36,7 +36,7 @@ jobs:
     secrets:
       PROJECT_ROUTER_BOT_PRIVATE_KEY: ${{ secrets.PROJECT_ROUTER_BOT_PRIVATE_KEY }}
     with:
-      implementation_ref: v1.0.1 # x-release-please-version
+      implementation_ref: v1.1.0 # x-release-please-version
       repository: ${{ github.event.repository.name }}
       pull_request_node_id: ${{ github.event.pull_request.node_id }}
       project_field_values: '[{"project":194,"field":"Status","value":"Review"}]'

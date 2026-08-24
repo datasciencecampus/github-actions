@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.0](https://github.com/datasciencecampus/github-actions/compare/v1.0.1...v1.1.0) (2026-08-24)
+
+
+### Features
+
+* **workflows:** add implementation_ref input to issue and PR workflows for internal dispatching ([eca7810](https://github.com/datasciencecampus/github-actions/commit/eca78105ae82edf65a71f317e1ee25be601bc528))
+
 ## [1.0.1](https://github.com/datasciencecampus/github-actions/compare/v1.0.0...v1.0.1) (2026-08-24)
 
 
