@@ -1,14 +1,30 @@
 name: Add Pull Request To Projects
 
 'on':
-  repository_dispatch:
-    types:
-      - add-pr-to-projects
+  workflow_dispatch:
+    inputs:
+      repository:
+        description: Repository name the pull request belongs to.
+        required: false
+        type: string
+      pull_request_node_id:
+        description: Node ID of the pull request to add to projects.
+        required: true
+        type: string
+      project_field_values:
+        description: >-
+          JSON list of mappings, for example
+          [{"project":194,"field":"Status","value":"Review"}]
+        required: true
+        type: string
+      organization:
+        description: Organization login. Defaults to the repository owner.
+        required: false
+        type: string
 
 permissions:
   contents: read
   pull-requests: read
-  repository-projects: write
 
 jobs:
   add-pr-to-projects:
@@ -38,17 +54,17 @@ jobs:
         with:
           client-id: ${{ vars.PROJECT_HANDLER_BOT_APP_ID }}
           private-key: ${{ secrets.PROJECT_HANDLER_BOT_PEM }}
-          owner: datasciencecampus
-          repositories: ${{ github.event.client_payload.repository || github.event.repository.name }}
+          owner: ${{ inputs.organization || github.event.repository.owner.login }}
+          repositories: ${{ inputs.repository || github.event.repository.name }}
           permission-organization-projects: write
           permission-pull-requests: read
 
       - name: Add pull request to projects and set field values (Python)
         env:
-          PROJECT_FIELD_VALUES: ${{ github.event.client_payload.project_field_values }}
-          PULL_REQUEST_NODE_ID: ${{ github.event.client_payload.pull_request_node_id }}
+          GITHUB_ORG: ${{ inputs.organization || github.event.repository.owner.login }}
+          PROJECT_FIELD_VALUES: ${{ inputs.project_field_values }}
+          PULL_REQUEST_NODE_ID: ${{ inputs.pull_request_node_id }}
           GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
-          GITHUB_EVENT_PATH: ${{ github.event_path }}
         shell: python
         run: |
           import json
@@ -56,7 +72,7 @@ jobs:
           import sys
           import urllib.request
 
-          ORG = "datasciencecampus"
+          ORG = os.environ.get("GITHUB_ORG", "").strip()
 
           def graphql(token, query, variables):
               payload = json.dumps({"query": query, "variables": variables}).encode("utf-8")
@@ -393,6 +409,10 @@ jobs:
 
           if not token:
               print("Missing app token.")
+              sys.exit(1)
+
+          if not ORG:
+              print("Missing organization name. Provide it in the repository_dispatch payload as 'organization'.")
               sys.exit(1)
 
           if not mappings:

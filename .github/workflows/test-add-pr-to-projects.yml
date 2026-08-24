@@ -64,14 +64,16 @@ jobs:
           PROJECT_FIELD_VALUES: ${{ inputs.project_field_values || vars.TEST_PR_PROJECT_FIELD_VALUES || '[{"project":194,"field":"Status","value":"Review"}]' }}
           PULL_REQUEST_NODE_ID: ${{ inputs.pull_request_node_id || github.event.pull_request.node_id || '' }}
           REPOSITORY_NAME: ${{ github.event.repository.name }}
+          REF: ${{ github.ref_name }}
         run: |
           jq -n \
+            --arg ref "$REF" \
             --arg repo "$REPOSITORY_NAME" \
             --arg node_id "$PULL_REQUEST_NODE_ID" \
             --arg project_field_values "$PROJECT_FIELD_VALUES" \
             '{
-              event_type: "add-pr-to-projects",
-              client_payload: {
+              ref: $ref,
+              inputs: {
                 repository: $repo,
                 pull_request_node_id: $node_id,
                 project_field_values: $project_field_values
@@ -82,5 +84,5 @@ jobs:
             -X POST \
             -H "Accept: application/vnd.github+json" \
             -H "Authorization: Bearer ${GH_TOKEN}" \
-            https://api.github.com/repos/datasciencecampus/github-actions/dispatches \
+            https://api.github.com/repos/datasciencecampus/github-actions/actions/workflows/add-pr-to-projects.yml/dispatches \
             -d @payload.json
