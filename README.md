@@ -12,11 +12,27 @@ This repository is the sister repository to [ONSdigital/ons-github-actions](http
 - Documentation index: [docs/README.md](docs/README.md)
 - Contribution guide: [CONTRIBUTING.md](CONTRIBUTING.md)
 
-## Workflow docs
+## Reusable workflows
 
-- How to add issues to projects: [docs/how-to/use-add-issue-to-projects-workflow.md](docs/how-to/use-add-issue-to-projects-workflow.md)
-- How to add pull requests to projects: [docs/how-to/use-add-pr-to-projects-workflow.md](docs/how-to/use-add-pr-to-projects-workflow.md)
-- Reusable workflows reference: [docs/reference/reusable-workflows.md](docs/reference/reusable-workflows.md)
+### add-issue-to-projects
+
+Adds opened issues to one or more `datasciencecampus` Projects by project number.
+
+- Workflow: [.github/workflows/add-issue-to-projects.yml](.github/workflows/add-issue-to-projects.yml)
+- How-to: [docs/how-to/use-add-issue-to-projects-workflow.md](docs/how-to/use-add-issue-to-projects-workflow.md)
+- Test workflow: [.github/workflows/test-add-issue-to-projects.yml](.github/workflows/test-add-issue-to-projects.yml)
+
+### add-pr-to-projects
+
+Adds opened pull requests to `datasciencecampus` Projects and sets configured field values (for example `Status = In review`).
+
+- Workflow: [.github/workflows/add-pr-to-projects.yml](.github/workflows/add-pr-to-projects.yml)
+- How-to: [docs/how-to/use-add-pr-to-projects-workflow.md](docs/how-to/use-add-pr-to-projects-workflow.md)
+- Test workflow: [.github/workflows/test-add-pr-to-projects.yml](.github/workflows/test-add-pr-to-projects.yml)
+
+### Shared reference
+
+- Reusable workflows contract and inputs: [docs/reference/reusable-workflows.md](docs/reference/reusable-workflows.md)
 
 ## Rationale
 
