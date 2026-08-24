@@ -6,16 +6,14 @@ Workflow: `.github/workflows/add-pr-to-projects.yml`
 
 ## Prerequisites
 
-The following must be available as **organisation-level** Actions variables and secrets (they are granted to all repos in the org automatically):
+The following organisation-level Actions variables and secrets must be available to your repository (they are granted automatically to all repos in the org):
 
 | Name | Type | Purpose |
 |------|------|---------|
 | `PROJECT_ROUTER_BOT_APP_ID` | Variable | Client ID of the app that triggers the workflow |
 | `PROJECT_ROUTER_BOT_PEM` | Secret | Private key of the app that triggers the workflow |
-| `PROJECT_HANDLER_BOT_APP_ID` | Variable | Client ID of the app that manages projects |
-| `PROJECT_HANDLER_BOT_PEM` | Secret | Private key of the app that manages projects |
 
-Both apps are already installed for the `datasciencecampus` org — you do not need to create them.
+The project-handling credentials are stored in this repository and require no action from callers.
 
 ## Add to your repository
 

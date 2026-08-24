@@ -10,6 +10,8 @@ Workflow: `.github/workflows/add-issue-to-projects.yml`
 
 Same organisation-level credentials as `add-pr-to-projects` — see [Prerequisites](use-add-pr-to-projects-workflow.md#prerequisites).
 
+The project-handling credentials are stored in this repository and require no action from callers.
+
 ## Add to your repository
 
 Create `.github/workflows/add-issue-to-projects.yml` in your repository with the following content.
