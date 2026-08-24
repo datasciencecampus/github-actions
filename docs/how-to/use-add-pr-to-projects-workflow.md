@@ -10,8 +10,10 @@ Workflow:
 
 1. The caller can send `repository_dispatch` to `datasciencecampus/github-actions`.
 2. Organization credentials are available to this workflow:
-  - `PROJECT_HANDLER_BOT_APP_ID` (variable)
-  - `PROJECT_HANDLER_BOT_PEM` (secret)
+
+- `PROJECT_HANDLER_BOT_APP_ID` (variable)
+- `PROJECT_HANDLER_BOT_PEM` (secret)
+
 3. Each target project and field exists in `datasciencecampus` Projects.
 
 ## Trigger this repo via repository_dispatch
