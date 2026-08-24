@@ -36,6 +36,7 @@ jobs:
       - name: Validate dispatch inputs
         env:
           WORKFLOW_REF: ${{ github.workflow_ref }}
+          PULL_REQUEST_HEAD_REF: ${{ github.event.pull_request.head.ref || github.head_ref }}
           TARGET_REPOSITORY: ${{ inputs.repository }}
           PULL_REQUEST_NODE_ID: ${{ inputs.pull_request_node_id }}
         run: |
@@ -46,6 +47,9 @@ jobs:
               ;;
             refs/tags/*)
               ref="${ref#refs/tags/}"
+              ;;
+            refs/pull/*)
+              ref="$PULL_REQUEST_HEAD_REF"
               ;;
           esac
 
