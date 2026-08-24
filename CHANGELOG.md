@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.2.2](https://github.com/datasciencecampus/github-actions/compare/v1.2.1...v1.2.2) (2026-08-24)
+
+
+### Bug Fixes
+
+* require project_field_values and node_id for manual tests in reusable workflows ([f3171c7](https://github.com/datasciencecampus/github-actions/commit/f3171c7064075cc9456f1aabbeeb9d298cab3041))
+* update project_field_values examples to use project ID 1234 ([4b8471e](https://github.com/datasciencecampus/github-actions/commit/4b8471ebc26552f882b10df4f40e6b59b1a8ee88))
+
 ## [1.2.1](https://github.com/datasciencecampus/github-actions/compare/v1.2.0...v1.2.1) (2026-08-24)
 
 
