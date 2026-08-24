@@ -1,0 +1,47 @@
+name: Request GitHub Token Access
+description: Request project-routing access for a repository or additional approved project numbers.
+title: "Request project-routing access for <repository>"
+labels:
+  - access-request
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form to request access to the central project-routing workflows.
+
+        Approval should only be granted to repositories that need to route issues or pull requests into datasciencecampus Projects.
+  - type: input
+    id: repository
+    attributes:
+      label: Repository name
+      description: Repository to add to the central allowlist.
+      placeholder: example-repository
+    validations:
+      required: true
+  - type: textarea
+    id: projects
+    attributes:
+      label: Approved project numbers
+      description: List every ProjectsV2 number this repository needs to target and why.
+      placeholder: |
+        194 - triage board
+        205 - delivery board
+    validations:
+      required: true
+  - type: textarea
+    id: workflows
+    attributes:
+      label: Required workflows
+      description: Note whether you need issue routing, pull request routing, or both.
+      placeholder: |
+        - add-issue-to-projects
+        - add-pr-to-projects
+    validations:
+      required: true
+  - type: textarea
+    id: justification
+    attributes:
+      label: Business justification
+      description: Explain why this repository needs central project-routing access.
+    validations:
+      required: true

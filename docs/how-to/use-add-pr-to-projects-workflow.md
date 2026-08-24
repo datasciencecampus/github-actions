@@ -6,14 +6,14 @@ Workflow: `.github/workflows/add-pr-to-projects.yml`
 
 ## Prerequisites
 
-The following organisation-level Actions variables and secrets must be available to your repository (they are granted automatically to all repos in the org):
+The following organisation-level Actions variables and secrets must be available to your repository after it has been approved for project-routing access:
 
-| Name | Type | Purpose |
-|------|------|---------|
-| `PROJECT_ROUTER_BOT_APP_ID` | Variable | Client ID of the app that triggers the workflow |
-| `PROJECT_ROUTER_BOT_PEM` | Secret | Private key of the app that triggers the workflow |
+- `PROJECT_ROUTER_BOT_APP_ID`: variable containing the client ID of the app that triggers the workflow.
+- `PROJECT_ROUTER_BOT_PEM`: secret containing the private key of the app that triggers the workflow.
 
 The project-handling credentials are stored in this repository and require no action from callers.
+
+Your repository must also be added to the central allowlist in this repository, and each project number you intend to target must be approved for that repository. Use the access request form in [.github/ISSUE_TEMPLATE/request-github-token-access.yml](../../.github/ISSUE_TEMPLATE/request-github-token-access.yml) when onboarding a new repository or project.
 
 ## Add to your repository
 
@@ -74,26 +74,24 @@ jobs:
 
 ## Input format
 
-`project_field_values` is a JSON array. Each entry must have a `project` number, `field`, and `value`:
+`project_field_values` is a JSON array. Each entry must have:
 
-| Key | Required | Description |
-|-----|----------|-------------|
-| `project` | Yes | Numeric project number |
-| `field` | Yes | Field name in the project |
-| `value` | Yes | Value to set for that field |
+- `project`: required. Numeric project number.
+- `field`: required. Field name in the project.
+- `value`: required. Value to set for that field.
 
 Example — set Status to Review on project 194:
 
 ```json
-[{"project":194,"field":"Status","value":"Review"}]
+[{ "project": 194, "field": "Status", "value": "Review" }]
 ```
 
 Example — set fields on two projects:
 
 ```json
 [
-  {"project":194,"field":"Status","value":"Review"},
-  {"project":205,"field":"Priority","value":"High"}
+  { "project": 194, "field": "Status", "value": "Review" },
+  { "project": 205, "field": "Priority", "value": "High" }
 ]
 ```
 
@@ -102,3 +100,12 @@ Example — set fields on two projects:
 Your project number appears in the URL of the project board:
 `https://github.com/orgs/datasciencecampus/projects/194` → project number is `194`.
 
+## Security checks performed by the called workflow
+
+Before the pull request is added to a project, the central workflow will:
+
+1. Refuse requests from repositories that are not on the central allowlist.
+2. Refuse project numbers that are not approved for the calling repository.
+3. Verify that the submitted pull request node ID resolves to the approved repository.
+
+These checks are enforced in the called workflow, so changing the caller YAML does not bypass them.

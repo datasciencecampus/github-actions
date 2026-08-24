@@ -24,13 +24,13 @@ in the issue workflow — if omitted, the item is added to the project with no f
 Example with no field update:
 
 ```json
-[{"project": 194}]
+[{ "project": 194 }]
 ```
 
 Example with a field update:
 
 ```json
-[{"project": 194, "field": "Status", "value": "Backlog"}]
+[{ "project": 194, "field": "Status", "value": "Backlog" }]
 ```
 
 ## Rationale

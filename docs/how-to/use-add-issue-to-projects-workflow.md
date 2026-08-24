@@ -12,6 +12,8 @@ Same organisation-level credentials as `add-pr-to-projects` — see [Prerequisit
 
 The project-handling credentials are stored in this repository and require no action from callers.
 
+Your repository must also be added to the central allowlist in this repository, and each project number you intend to target must be approved for that repository. Use the access request form in [.github/ISSUE_TEMPLATE/request-github-token-access.yml](../../.github/ISSUE_TEMPLATE/request-github-token-access.yml) when onboarding a new repository or project.
+
 ## Add to your repository
 
 Create `.github/workflows/add-issue-to-projects.yml` in your repository with the following content.
@@ -71,33 +73,28 @@ jobs:
 
 ## Input format
 
-`project_field_values` is a JSON array. Each entry must have a `project` number. `field` and `value` are optional — if omitted, the issue is added without any field update.
+`project_field_values` is a JSON array. Each entry must have a `project` number. `field` and `value` are optional. If omitted, the issue is added without any field update.
 
-| Key | Required | Description |
-|-----|----------|-------------|
-| `project` | Yes | Numeric project number |
-| `field` | No | Field name in the project |
-| `value` | No (required if `field` given) | Value to set for that field |
+- `project`: required. Numeric project number.
+- `field`: optional. Field name in the project.
+- `value`: optional, but required if `field` is provided. Value to set for that field.
 
 Example — add to project with no field update:
 
 ```json
-[{"project":194}]
+[{ "project": 194 }]
 ```
 
 Example — add to project and set Status:
 
 ```json
-[{"project":194,"field":"Status","value":"Backlog"}]
+[{ "project": 194, "field": "Status", "value": "Backlog" }]
 ```
 
 Example — two projects, one with a field update:
 
 ```json
-[
-  {"project":194},
-  {"project":205,"field":"Priority","value":"Medium"}
-]
+[{ "project": 194 }, { "project": 205, "field": "Priority", "value": "Medium" }]
 ```
 
 ## Finding your project number
@@ -105,3 +102,12 @@ Example — two projects, one with a field update:
 Your project number appears in the URL of the project board:
 `https://github.com/orgs/datasciencecampus/projects/194` → project number is `194`.
 
+## Security checks performed by the called workflow
+
+Before the issue is added to a project, the central workflow will:
+
+1. Refuse requests from repositories that are not on the central allowlist.
+2. Refuse project numbers that are not approved for the calling repository.
+3. Verify that the submitted issue node ID resolves to the approved repository.
+
+These checks are enforced in the called workflow, so changing the caller YAML does not bypass them.
