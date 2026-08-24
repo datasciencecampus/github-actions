@@ -2,7 +2,7 @@ name: Test Add Pull Request To Projects
 
 'on':
   pull_request:
-    types: [opened]
+    types: [opened, reopened]
   workflow_dispatch:
     inputs:
       project_field_values:
@@ -64,7 +64,7 @@ jobs:
           PROJECT_FIELD_VALUES: ${{ inputs.project_field_values || vars.TEST_PR_PROJECT_FIELD_VALUES || '[{"project":194,"field":"Status","value":"Review"}]' }}
           PULL_REQUEST_NODE_ID: ${{ inputs.pull_request_node_id || github.event.pull_request.node_id || '' }}
           REPOSITORY_NAME: ${{ github.event.repository.name }}
-          REF: ${{ github.ref_name }}
+          REF: ${{ github.event.pull_request.head.ref || github.ref_name }}
         run: |
           jq -n \
             --arg ref "$REF" \
