@@ -80,7 +80,7 @@ jobs:
               }
             }' > payload.json
 
-          curl -sS -L \
+          curl -sS -L --fail-with-body \
             -X POST \
             -H "Accept: application/vnd.github+json" \
             -H "Authorization: Bearer ${GH_TOKEN}" \
