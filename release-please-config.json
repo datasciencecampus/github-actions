@@ -9,8 +9,9 @@
       "changelog-path": "CHANGELOG.md",
       "extra-files": [
         {
-          "type": "generic",
-          "path": "configs/implementation-ref.json"
+          "type": "json",
+          "path": "configs/implementation-ref.json",
+          "jsonpath": "$.implementation_version"
         }
       ]
     }

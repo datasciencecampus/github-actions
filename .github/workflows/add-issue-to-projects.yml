@@ -48,11 +48,17 @@ jobs:
           ISSUE_NODE_ID: ${{ inputs.issue_node_id }}
         run: |
           resolve_ref_from_metadata() {
-            curl -sS -L --fail-with-body \
+            local implementation_version
+
+            implementation_version=$(curl -sS -L --fail-with-body \
               -H "Accept: application/vnd.github.raw+json" \
               -H "Authorization: Bearer ${API_TOKEN}" \
               "https://api.github.com/repos/${WORKFLOW_REPOSITORY}/contents/configs/implementation-ref.json?ref=${WORKFLOW_SHA}" \
-              | jq -r '.implementation_ref // empty'
+              | jq -r '.implementation_version // empty')
+
+            if [ -n "$implementation_version" ]; then
+              printf 'v%s\n' "$implementation_version"
+            fi
           }
 
           ref="$IMPLEMENTATION_REF"

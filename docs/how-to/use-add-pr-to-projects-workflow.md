@@ -41,7 +41,7 @@ jobs:
       project_field_values: '[{"project":194,"field":"Status","value":"Review"}]'
 ```
 
-If your organisation requires SHA pinning, pin the reusable workflow with `@<commit-sha>` and omit `implementation_ref` unless you need to override the dispatch ref recorded in the pinned workflow revision.
+If your organisation requires SHA pinning, pin the reusable workflow with `@<commit-sha>` and omit `implementation_ref` unless you need to override the release-managed version recorded in the pinned workflow revision.
 
 ## Input format
 
