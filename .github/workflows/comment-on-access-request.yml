@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   comment-on-access-request:
-    name: Post reviewer instructions
+    name: Label issue and post reviewer instructions
     if: ${{ contains(join(github.event.issue.labels.*.name, ','), 'access-request') }}
     runs-on: ubuntu-latest
     permissions:
@@ -21,7 +21,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_API_URL: ${{ github.api_url }}
-          ISSUE_COMMENTS_URL: ${{ github.event.issue.comments_url }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
         shell: python
         run: |
           import json
@@ -29,10 +30,31 @@ jobs:
           import urllib.request
 
           token = os.environ["GITHUB_TOKEN"]
-          comments_url = os.environ["ISSUE_COMMENTS_URL"]
           api_url = os.environ["GITHUB_API_URL"]
+          repository = os.environ["GITHUB_REPOSITORY"]
+          issue_number = os.environ["ISSUE_NUMBER"]
 
-            body = (
+          def github_request(method, url, payload):
+              request = urllib.request.Request(
+                  url,
+                  data=json.dumps(payload).encode("utf-8"),
+                  headers={
+                      "Authorization": f"Bearer {token}",
+                      "Accept": "application/vnd.github+json",
+                      "Content-Type": "application/json",
+                      "X-GitHub-Api-Version": "2022-11-28",
+                  },
+                  method=method,
+              )
+              with urllib.request.urlopen(request) as response:
+                  if response.status >= 300:
+                      raise RuntimeError(
+                          f"GitHub API request failed: {method} {url} -> {response.status}"
+                      )
+
+          issue_api_url = f"{api_url}/repos/{repository}/issues/{issue_number}"
+
+          body = (
               "Reviewer guidance:\n\n"
               "Please check:\n"
               "- the repository name is correct and belongs to this organisation\n"
@@ -44,22 +66,5 @@ jobs:
               "If you are not satisfied:\n"
               "- request changes in this issue, or close it without marking it as completed\n\n"
               "The allowlist update workflow does not run until the issue is closed as completed."
-            )
-
-          request = urllib.request.Request(
-              comments_url,
-              data=json.dumps({"body": body}).encode("utf-8"),
-              headers={
-                  "Authorization": f"Bearer {token}",
-                  "Accept": "application/vnd.github+json",
-                  "Content-Type": "application/json",
-                  "X-GitHub-Api-Version": "2022-11-28",
-              },
-              method="POST",
           )
-
-          with urllib.request.urlopen(request) as response:
-              if response.status >= 300:
-                  raise RuntimeError(
-                      f"Failed to create reviewer comment via {api_url}: {response.status}"
-                  )
+          github_request("POST", f"{issue_api_url}/comments", {"body": body})
