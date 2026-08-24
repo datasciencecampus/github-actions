@@ -5,7 +5,7 @@ name: Add Pull Request To Projects
     inputs:
       repository:
         description: Repository name the pull request belongs to.
-        required: false
+        required: true
         type: string
       pull_request_node_id:
         description: Node ID of the pull request to add to projects.
@@ -18,7 +18,7 @@ name: Add Pull Request To Projects
         required: true
         type: string
       organization:
-        description: Organization login. Defaults to the repository owner.
+        description: Organization login. Must match the owner of this repository.
         required: false
         type: string
 
@@ -38,15 +38,147 @@ jobs:
         run: |
           if [ -z "$PROJECT_HANDLER_BOT_APP_ID" ]; then
             echo "Missing variable PROJECT_HANDLER_BOT_APP_ID."
-            echo "Create it as an organization Actions variable and grant access to calling repositories."
+            echo "Create it in the project-automation environment for this repository."
             exit 1
           fi
 
           if [ -z "$PROJECT_HANDLER_BOT_PEM" ]; then
             echo "Missing secret PROJECT_HANDLER_BOT_PEM."
-            echo "Create it as an organization Actions secret and grant access to calling repositories."
+            echo "Create it in the project-automation environment for this repository."
             exit 1
           fi
+
+      - name: Validate dispatch scope
+        env:
+          PROJECT_FIELD_VALUES: ${{ inputs.project_field_values }}
+          REQUESTED_ORGANIZATION: ${{ inputs.organization }}
+          TARGET_REPOSITORY: ${{ inputs.repository }}
+          TRUSTED_ORGANIZATION: ${{ github.repository_owner }}
+          PROJECT_ROUTER_ALLOWED_REPOSITORIES: ${{ vars.PROJECT_ROUTER_ALLOWED_REPOSITORIES }}
+          PROJECT_ROUTER_ALLOWED_PROJECTS: ${{ vars.PROJECT_ROUTER_ALLOWED_PROJECTS }}
+        shell: python
+        run: |
+          import json
+          import os
+          import sys
+
+          def parse_string_list(raw):
+              raw = (raw or "").strip()
+              if not raw:
+                  return []
+
+              try:
+                  parsed = json.loads(raw)
+              except Exception:
+                  parsed = None
+
+              if isinstance(parsed, list):
+                  return [str(item).strip() for item in parsed if str(item).strip()]
+
+              return [item.strip() for item in raw.split(",") if item.strip()]
+
+          def parse_project_mappings(raw):
+              raw = (raw or "").strip()
+              if not raw:
+                  return []
+
+              try:
+                  parsed = json.loads(raw)
+              except Exception as exc:
+                  raise RuntimeError(
+                      "PROJECT_FIELD_VALUES must be valid JSON for authorization checks."
+                  ) from exc
+
+              if isinstance(parsed, dict):
+                  return [parsed]
+              if isinstance(parsed, list):
+                  return parsed
+
+              raise RuntimeError("PROJECT_FIELD_VALUES must be a JSON object or array.")
+
+          def normalize_project_number(project_value):
+              project_number = str(project_value).strip()
+              if not project_number.isdigit():
+                  return None
+              return int(project_number)
+
+          trusted_org = os.environ.get("TRUSTED_ORGANIZATION", "").strip()
+          requested_org = os.environ.get("REQUESTED_ORGANIZATION", "").strip()
+          target_repo = os.environ.get("TARGET_REPOSITORY", "").strip()
+
+          if not target_repo:
+              print("Missing repository input.")
+              sys.exit(1)
+
+          if requested_org and requested_org != trusted_org:
+              print(f"Invalid organization '{requested_org}'. Only '{trusted_org}' is allowed.")
+              sys.exit(1)
+
+          allowed_repositories = parse_string_list(
+              os.environ.get("PROJECT_ROUTER_ALLOWED_REPOSITORIES", "")
+          )
+          if not allowed_repositories:
+              print(
+                  "Missing variable PROJECT_ROUTER_ALLOWED_REPOSITORIES in the project-automation environment."
+              )
+              sys.exit(1)
+
+          if target_repo not in allowed_repositories:
+              print(f"Repository '{target_repo}' is not approved to use this workflow.")
+              sys.exit(1)
+
+          raw_allowed_projects = os.environ.get("PROJECT_ROUTER_ALLOWED_PROJECTS", "").strip()
+          if not raw_allowed_projects:
+              print(
+                  "Missing variable PROJECT_ROUTER_ALLOWED_PROJECTS in the project-automation environment."
+              )
+              sys.exit(1)
+
+          try:
+              allowed_projects_map = json.loads(raw_allowed_projects)
+          except Exception as exc:
+              raise RuntimeError(
+                  "PROJECT_ROUTER_ALLOWED_PROJECTS must be valid JSON."
+              ) from exc
+
+          if not isinstance(allowed_projects_map, dict):
+              raise RuntimeError("PROJECT_ROUTER_ALLOWED_PROJECTS must be a JSON object.")
+
+          allowed_project_values = allowed_projects_map.get(target_repo, allowed_projects_map.get("*"))
+          if not isinstance(allowed_project_values, list) or not allowed_project_values:
+              print(f"Repository '{target_repo}' does not have any approved project mappings.")
+              sys.exit(1)
+
+          allowed_projects = {
+              normalize_project_number(value)
+              for value in allowed_project_values
+              if normalize_project_number(value) is not None
+          }
+          if not allowed_projects:
+              raise RuntimeError(
+                  f"Repository '{target_repo}' has an invalid project allowlist entry."
+              )
+
+          mappings = parse_project_mappings(os.environ.get("PROJECT_FIELD_VALUES", ""))
+          if not mappings:
+              print("No project field mappings were provided.")
+              sys.exit(1)
+
+          for idx, mapping in enumerate(mappings, start=1):
+              if not isinstance(mapping, dict):
+                  print(f"Entry {idx}: each mapping must be an object/dictionary.")
+                  sys.exit(1)
+              project_number = normalize_project_number(mapping.get("project"))
+              if project_number is None:
+                  print(
+                      f"Entry {idx}: invalid project '{mapping.get('project')}'. Use a numeric project number."
+                  )
+                  sys.exit(1)
+              if project_number not in allowed_projects:
+                  print(
+                      f"Entry {idx}: project #{project_number} is not approved for repository '{target_repo}'."
+                  )
+                  sys.exit(1)
 
       - name: Create GitHub App token
         id: app-token
@@ -54,16 +186,17 @@ jobs:
         with:
           client-id: ${{ vars.PROJECT_HANDLER_BOT_APP_ID }}
           private-key: ${{ secrets.PROJECT_HANDLER_BOT_PEM }}
-          owner: ${{ inputs.organization || github.event.repository.owner.login }}
-          repositories: ${{ inputs.repository || github.event.repository.name }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ inputs.repository }}
           permission-organization-projects: write
           permission-pull-requests: read
 
       - name: Add pull request to projects and set field values (Python)
         env:
-          GITHUB_ORG: ${{ inputs.organization || github.event.repository.owner.login }}
+          GITHUB_ORG: ${{ github.repository_owner }}
           PROJECT_FIELD_VALUES: ${{ inputs.project_field_values }}
           PULL_REQUEST_NODE_ID: ${{ inputs.pull_request_node_id }}
+          TARGET_REPOSITORY: ${{ inputs.repository }}
           GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
         shell: python
         run: |
@@ -73,6 +206,7 @@ jobs:
           import urllib.request
 
           ORG = os.environ.get("GITHUB_ORG", "").strip()
+          TARGET_REPOSITORY = os.environ.get("TARGET_REPOSITORY", "").strip()
 
           def graphql(token, query, variables):
               payload = json.dumps({"query": query, "variables": variables}).encode("utf-8")
@@ -97,7 +231,6 @@ jobs:
               if not raw:
                   return []
 
-              # JSON list is preferred when passed by callers.
               try:
                   parsed = json.loads(raw)
                   if isinstance(parsed, dict):
@@ -107,10 +240,6 @@ jobs:
               except Exception:
                   pass
 
-              # Fallback for YAML-like blocks:
-              # - project: 123
-              #   field: Status
-              #   value: Review
               entries = []
               current = {}
               for original_line in raw.splitlines():
@@ -177,6 +306,28 @@ jobs:
               data = graphql(token, query, {"org": ORG, "number": number})
               return data.get("organization", {}).get("projectV2")
 
+          def get_pull_request_repository(token, pull_request_node_id):
+              query = """
+              query($id: ID!) {
+                node(id: $id) {
+                  ... on PullRequest {
+                    id
+                    repository {
+                      name
+                      owner {
+                        login
+                      }
+                    }
+                  }
+                }
+              }
+              """
+              data = graphql(token, query, {"id": pull_request_node_id})
+              node = data.get("node") or {}
+              repository = node.get("repository") or {}
+              owner = repository.get("owner") or {}
+              return owner.get("login", ""), repository.get("name", "")
+
           def find_existing_item(token, project_id, pull_request_node_id):
               query = """
               query($projectId: ID!, $cursor: String) {
@@ -228,11 +379,7 @@ jobs:
                   mutation,
                   {"projectId": project_id, "contentId": pull_request_node_id},
               )
-              return (
-                  data.get("addProjectV2ItemById", {})
-                  .get("item", {})
-                  .get("id", "")
-              )
+              return data.get("addProjectV2ItemById", {}).get("item", {}).get("id", "")
 
           def get_or_create_item(token, project_id, pull_request_node_id):
               existing_item_id = find_existing_item(token, project_id, pull_request_node_id)
@@ -354,9 +501,7 @@ jobs:
 
                   project = project_cache.get(project_number)
                   if not project:
-                      errors.append(
-                          f"Entry {idx}: project #{project_number} was not found in {ORG}."
-                      )
+                      errors.append(f"Entry {idx}: project #{project_number} was not found in {ORG}.")
                       continue
 
                   fields = project.get("fields", {}).get("nodes", [])
@@ -412,7 +557,11 @@ jobs:
               sys.exit(1)
 
           if not ORG:
-              print("Missing organization name. Provide it in the repository_dispatch payload as 'organization'.")
+              print("Missing trusted organization name.")
+              sys.exit(1)
+
+          if not TARGET_REPOSITORY:
+              print("Missing repository input.")
               sys.exit(1)
 
           if not mappings:
@@ -421,6 +570,14 @@ jobs:
 
           if not pull_request_node_id:
               print("Unable to resolve pull request node id from input or event payload.")
+              sys.exit(1)
+
+          pr_org, pr_repo = get_pull_request_repository(token, pull_request_node_id)
+          if pr_org != ORG or pr_repo != TARGET_REPOSITORY:
+              print(
+                  "Pull request node id does not belong to the approved source repository "
+                  f"'{ORG}/{TARGET_REPOSITORY}'."
+              )
               sys.exit(1)
 
           project_cache = build_project_cache(token, mappings)

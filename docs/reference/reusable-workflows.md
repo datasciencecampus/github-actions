@@ -1,77 +1,88 @@
 # Reusable workflows reference
 
-This page lists the reusable workflows in this repository and their caller-facing contracts.
+This page lists the workflows in this repository and their caller-facing contracts.
 
 ## Shared credential model
 
-These called workflows use org-scoped credentials inside the called workflow:
+Approved callers use the router bot credentials to dispatch workflows:
 
-- `PROJECT_HANDLER_BOT_APP_ID` (Actions variable)
-- `PROJECT_HANDLER_BOT_PEM` (Actions secret)
+- `PROJECT_ROUTER_BOT_APP_ID` (Actions variable, org-level)
+- `PROJECT_ROUTER_BOT_PEM` (Actions secret, org-level)
 
-Dispatch caller workflows should use router bot credentials to send repository dispatch events:
-
-- `PROJECT_ROUTER_BOT_APP_ID` (Actions variable)
-- `PROJECT_ROUTER_BOT_PEM` (Actions secret)
+Project-handling credentials are used internally and are not required from callers. The called workflows also enforce a central repository allowlist and per-repository project allowlist before minting the handler token. See [GitHub Apps reference](github-apps.md).
 
 ## add-issue-to-projects
 
-Workflow file:
+Workflow file: `.github/workflows/add-issue-to-projects.yml`
 
-- `.github/workflows/add-issue-to-projects.yml`
+### Issue Trigger
 
-### add-issue-to-projects trigger contract
+`workflow_dispatch` via `POST /repos/datasciencecampus/github-actions/actions/workflows/add-issue-to-projects.yml/dispatches`
 
-- `repository_dispatch` with event type `add-issue-to-projects`
+### Issue Inputs
 
-### add-issue-to-projects payload fields
+- `issue_node_id`: required. Node ID of the issue to add.
+- `project_field_values`: required. JSON array of project mappings.
+- `repository`: required. Source repository name; must be centrally approved.
+- `organization`: optional compatibility field; if provided it must match the owner of this repository.
 
-For `repository_dispatch`, pass values in `client_payload`:
+### Issue `project_field_values` Format
 
-- `project_numbers` (required): comma-separated or newline-separated project numbers
-- `issue_node_id` (required): issue node id
-- `repository` (optional): source repository name for token scoping. If omitted, defaults to this repository name.
+Each entry must have `project`. `field` and `value` are optional — if omitted the issue is added with no field update.
 
-### add-issue-to-projects behavior
+```json
+[{"project": 194}]
+[{"project": 194, "field": "Status", "value": "Backlog"}]
+```
+
+### Issue Behavior
 
 1. Validates credentials.
-2. Validates and normalizes project numbers.
-3. Verifies project numbers exist in `datasciencecampus` Projects.
-4. Adds the issue to each target project.
+2. Validates that the source repository is on the central allowlist and that every requested project is approved for that repository.
+3. Verifies that the submitted issue node ID belongs to the approved source repository.
+4. Parses and validates all mapping entries.
+5. For each entry: adds the issue to the project if not already present.
+6. If `field` is specified: sets the field value on the project item.
 
-### add-issue-to-projects permissions used
+### Issue `GITHUB_TOKEN` Permissions
 
 - `contents: read`
-- `issues: read`
-- `repository-projects: write`
+
+---
 
 ## add-pr-to-projects
 
-Workflow file:
+Workflow file: `.github/workflows/add-pr-to-projects.yml`
 
-- `.github/workflows/add-pr-to-projects.yml`
+### Pull Request Trigger
 
-### add-pr-to-projects trigger contract
+`workflow_dispatch` via `POST /repos/datasciencecampus/github-actions/actions/workflows/add-pr-to-projects.yml/dispatches`
 
-- `repository_dispatch` with event type `add-pr-to-projects`
+### Pull Request Inputs
 
-### add-pr-to-projects payload fields
+- `pull_request_node_id`: required. Node ID of the pull request to add.
+- `project_field_values`: required. JSON array of project mappings.
+- `repository`: required. Source repository name; must be centrally approved.
+- `organization`: optional compatibility field; if provided it must match the owner of this repository.
 
-For `repository_dispatch`, pass values in `client_payload`:
+### Pull Request `project_field_values` Format
 
-- `project_field_values` (required): JSON string list of mappings
-- `pull_request_node_id` (required): pull request node id
-- `repository` (optional): source repository name for token scoping. If omitted, defaults to this repository name.
+Each entry must have `project`, `field`, and `value`.
 
-### add-pr-to-projects behavior
+```json
+[{ "project": 194, "field": "Status", "value": "Review" }]
+```
+
+### Pull Request Behavior
 
 1. Validates credentials.
-2. Validates all mapping entries (project, field, value).
-3. Adds the pull request to each target project if needed.
-4. Sets the configured field value on each created/found project item.
+2. Validates that the source repository is on the central allowlist and that every requested project is approved for that repository.
+3. Verifies that the submitted pull request node ID belongs to the approved source repository.
+4. Parses and validates all mapping entries (project, field, and value required).
+5. For each entry: adds the pull request to the project if not already present.
+6. Sets the configured field value on the project item.
 
-### add-pr-to-projects permissions used
+### Pull Request `GITHUB_TOKEN` Permissions
 
 - `contents: read`
 - `pull-requests: read`
-- `repository-projects: write`
