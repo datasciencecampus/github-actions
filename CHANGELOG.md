@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.1](https://github.com/datasciencecampus/github-actions/compare/v1.0.0...v1.0.1) (2026-08-24)
+
+
+### Bug Fixes
+
+* **workflows:** add PULL_REQUEST_HEAD_REF to validate dispatch inputs for pull requests ([25926fa](https://github.com/datasciencecampus/github-actions/commit/25926fa9c904d46969dd2885d042ffe24970dc92))
+
 ## [1.0.0](https://github.com/datasciencecampus/github-actions/compare/v0.2.0...v1.0.0) (2026-08-24)
 
 
