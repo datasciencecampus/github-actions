@@ -36,8 +36,8 @@ Workflow file: `.github/workflows/add-issue-to-projects.yml`
 ### Issue Call Notes
 
 - This is the public reusable workflow for the issue flow.
-- It defaults to dispatching the same branch or tag ref the reusable workflow itself was invoked from, which keeps release-tag callers pinned to matching implementation code.
-- When callers pin by commit SHA, the workflow reads `configs/implementation-ref.json` from its pinned revision, turns `implementation_version` into a `v...` tag, and dispatches that ref. Use `implementation_ref` only to override that metadata.
+- If `implementation_ref` is omitted, the workflow reads `configs/implementation-ref.json` from the invoked workflow revision, turns `implementation_version` into a `v...` tag, and dispatches that release-managed ref.
+- Use `implementation_ref` only to override that release-managed dispatch target with a specific branch or tag.
 - It is most useful for workflows in this repository, or same-organization callers that intentionally expose the dispatch secret to the called workflow.
 
 ## add-issue-to-projects-impl
@@ -103,8 +103,8 @@ Workflow file: `.github/workflows/add-pr-to-projects.yml`
 ### Pull Request Call Notes
 
 - This is the public reusable workflow for the pull request flow.
-- It defaults to dispatching the same branch or tag ref the reusable workflow itself was invoked from, which keeps release-tag callers pinned to matching implementation code.
-- When callers pin by commit SHA, the workflow reads `configs/implementation-ref.json` from its pinned revision, turns `implementation_version` into a `v...` tag, and dispatches that ref. Use `implementation_ref` only to override that metadata.
+- If `implementation_ref` is omitted, the workflow reads `configs/implementation-ref.json` from the invoked workflow revision, turns `implementation_version` into a `v...` tag, and dispatches that release-managed ref.
+- Use `implementation_ref` only to override that release-managed dispatch target with a specific branch or tag.
 
 ## add-pr-to-projects-impl
 

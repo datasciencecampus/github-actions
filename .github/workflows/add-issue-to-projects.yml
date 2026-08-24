@@ -40,7 +40,6 @@ jobs:
       - name: Validate dispatch inputs
         env:
           IMPLEMENTATION_REF: ${{ inputs.implementation_ref }}
-          WORKFLOW_REF: ${{ github.workflow_ref }}
           WORKFLOW_SHA: ${{ job.workflow_sha || github.workflow_sha }}
           WORKFLOW_REPOSITORY: ${{ job.workflow_repository || github.repository }}
           API_TOKEN: ${{ github.token }}
@@ -64,28 +63,11 @@ jobs:
           ref="$IMPLEMENTATION_REF"
 
           if [ -z "$ref" ]; then
-            ref="${WORKFLOW_REF##*@}"
-            case "$ref" in
-              refs/heads/*)
-                ref="${ref#refs/heads/}"
-                ;;
-              refs/tags/*)
-                ref="${ref#refs/tags/}"
-                ;;
-            esac
-          fi
-
-          if [ -z "$ref" ] || printf '%s\n' "$ref" | grep -Eq '^[0-9a-f]{40}$'; then
             ref="$(resolve_ref_from_metadata)"
           fi
 
-          if [ -z "$ref" ] || [ "$ref" = "$WORKFLOW_REF" ]; then
-            echo "Unable to resolve a dispatchable workflow ref."
-            exit 1
-          fi
-
           if [ -z "$ref" ]; then
-            echo "Missing dispatch ref."
+            echo "Unable to resolve a release-tag dispatch ref from workflow metadata."
             exit 1
           fi
 

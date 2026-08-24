@@ -37,8 +37,8 @@ Adds opened pull requests to `datasciencecampus` Projects and sets configured fi
 
 Consumers should call the public reusable workflows from other repositories using `uses:`.
 
-- For branch or tag pinning, pin the reusable workflow directly to that ref.
-- For commit-SHA pinning, callers can usually omit `implementation_ref`. The reusable workflow reads the release version from metadata stored in the pinned workflow revision and dispatches the matching `v...` tag.
+- By default, the reusable workflows dispatch the release tag recorded in metadata stored alongside the invoked workflow revision.
+- Set `implementation_ref` only when you need to override that release-managed dispatch target with a specific branch or tag.
 
 The full caller-facing contract, including required inputs and `implementation_ref` behavior, is documented in [docs/reference/reusable-workflows.md](docs/reference/reusable-workflows.md).
 

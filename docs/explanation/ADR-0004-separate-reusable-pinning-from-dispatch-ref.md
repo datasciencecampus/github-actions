@@ -40,10 +40,8 @@ In practice:
 - Callers may pin the public reusable workflow by commit SHA in `uses:`.
 - Public reusable workflows accept an optional `implementation_ref` override.
 - If `implementation_ref` is omitted, the public reusable workflow derives the
-   dispatch ref from `github.workflow_ref` when that is already a branch or tag.
-- If the reusable workflow was pinned by commit SHA, it reads a release-managed
-   metadata file from that pinned workflow revision and turns the stored release
-   version into the matching `v...` dispatch tag.
+   dispatch ref from a release-managed metadata file in the invoked workflow revision.
+- It turns the stored release version into the matching `v...` dispatch tag.
 
 Example caller:
 
@@ -76,10 +74,10 @@ jobs:
    workflow revision carries the release-managed version that becomes the
    dispatch tag.
 
-4. **Provides a sensible default for tag-, branch-, and SHA-pinned callers**
-   Callers pinned to a tag or branch do not need extra configuration. The public
-   reusable workflow can derive the same branch or tag from `github.workflow_ref`,
-   and SHA-pinned callers use metadata updated by release-please.
+4. **Provides a single predictable default for callers**
+   Callers do not need extra configuration when the release-managed metadata is
+   correct. The public reusable workflow uses that metadata to resolve the
+   implementation dispatch tag.
 
 ## Consequences
 
@@ -87,7 +85,7 @@ Positive:
 
 - SHA-pinned consumers usually do not need a second version input.
 - The dispatched tag is explicit and audit-friendly for the pinned workflow revision.
-- Branch- and tag-pinned consumers keep a simple default path.
+- Branch-, tag-, and SHA-pinned consumers keep the same default path.
 
 Negative:
 
