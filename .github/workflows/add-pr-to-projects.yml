@@ -1,21 +1,9 @@
 name: Add Pull Request To Projects
 
 'on':
-  workflow_call:
-    inputs:
-      project_field_values:
-        description: >-
-          List of mappings with project, field, and value.
-          Example YAML block:
-          - project: 123
-            field: Status
-            value: In review
-        required: true
-        type: string
-      pull_request_node_id:
-        description: Optional pull request node id. If omitted, reads from event payload.
-        required: false
-        type: string
+  repository_dispatch:
+    types:
+      - add-pr-to-projects
 
 permissions:
   contents: read
@@ -51,14 +39,14 @@ jobs:
           client-id: ${{ vars.PROJECT_HANDLER_BOT_APP_ID }}
           private-key: ${{ secrets.PROJECT_HANDLER_BOT_PEM }}
           owner: datasciencecampus
-          repositories: ${{ github.event.repository.name }}
+          repositories: ${{ github.event.client_payload.repository || github.event.repository.name }}
           permission-organization-projects: write
           permission-pull-requests: read
 
       - name: Add pull request to projects and set field values (Python)
         env:
-          PROJECT_FIELD_VALUES: ${{ inputs.project_field_values }}
-          PULL_REQUEST_NODE_ID: ${{ inputs.pull_request_node_id }}
+          PROJECT_FIELD_VALUES: ${{ github.event.client_payload.project_field_values }}
+          PULL_REQUEST_NODE_ID: ${{ github.event.client_payload.pull_request_node_id }}
           GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
           GITHUB_EVENT_PATH: ${{ github.event_path }}
         shell: python

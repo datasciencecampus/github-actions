@@ -1,12 +1,9 @@
 name: Add Issue To Org Projects
 
 'on':
-  workflow_call:
-    inputs:
-      project_numbers:
-        description: Comma or newline separated project numbers in the datasciencecampus org.
-        required: true
-        type: string
+  repository_dispatch:
+    types:
+      - add-issue-to-projects
 
 permissions:
   contents: read
@@ -14,232 +11,10 @@ permissions:
   repository-projects: write
 
 jobs:
-  prepare-project-urls:
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    outputs:
-      project_urls: ${{ steps.build.outputs.project_urls }}
-    steps:
-      - name: Validate app credentials
-        env:
-          PROJECT_HANDLER_BOT_APP_ID: ${{ vars.PROJECT_HANDLER_BOT_APP_ID }}
-          PROJECT_HANDLER_BOT_PEM: ${{ secrets.PROJECT_HANDLER_BOT_PEM }}
-        run: |
-          if [ -z "$PROJECT_HANDLER_BOT_APP_ID" ]; then
-            echo "Missing variable PROJECT_HANDLER_BOT_APP_ID."
-            echo "Create it as an organization Actions variable and grant access to calling repositories."
-            exit 1
-          fi
-
-          if [ -z "$PROJECT_HANDLER_BOT_PEM" ]; then
-            echo "Missing secret PROJECT_HANDLER_BOT_PEM."
-            echo "Create it as an organization Actions secret and grant access to calling repositories."
-            exit 1
-          fi
-
-      - name: Create GitHub App token for validation
-        id: app-token-validate
-        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
-        with:
-          client-id: ${{ vars.PROJECT_HANDLER_BOT_APP_ID }}
-          private-key: ${{ secrets.PROJECT_HANDLER_BOT_PEM }}
-          owner: datasciencecampus
-          repositories: ${{ github.event.repository.name }}
-          permission-organization-projects: read
-
-      - name: Build and validate project URLs (Python)
-        id: build
-        env:
-          PROJECT_NUMBERS: ${{ inputs.project_numbers }}
-          GITHUB_TOKEN: ${{ steps.app-token-validate.outputs.token }}
-        shell: python
-        run: |
-          import json
-          import os
-          import time
-          import sys
-          import urllib.error
-          import urllib.request
-
-          org = "datasciencecampus"
-          raw = os.environ.get("PROJECT_NUMBERS", "")
-          token = os.environ.get("GITHUB_TOKEN", "")
-          output_path = os.environ.get("GITHUB_OUTPUT", "")
-
-          if not token:
-            print("Missing GITHUB_TOKEN for project validation.")
-            sys.exit(1)
-
-          if not output_path:
-            print("Missing GITHUB_OUTPUT path.")
-            sys.exit(1)
-
-          if len(raw) > 10000:
-            print("Input project_numbers is too large.")
-            sys.exit(1)
-
-          requested = []
-          for part in raw.replace(",", "\n").splitlines():
-              value = part.strip()
-              if value and value not in requested:
-                  requested.append(value)
-
-          if not requested:
-              print("No project numbers were provided.")
-              sys.exit(1)
-
-          invalid = [value for value in requested if not value.isdigit()]
-          if invalid:
-              print(f"Invalid project number(s): {', '.join(invalid)}")
-              sys.exit(1)
-
-          requested_numbers = [int(value) for value in requested]
-            if len(requested_numbers) > 100:
-              print("Too many project numbers requested. Maximum is 100.")
-              sys.exit(1)
-
-            def graphql_with_retry(query, variables, max_attempts=5, timeout_seconds=20):
-              last_error = None
-              for attempt in range(1, max_attempts + 1):
-                payload = json.dumps(
-                  {"query": query, "variables": variables}
-                ).encode("utf-8")
-                req = urllib.request.Request(
-                  "https://api.github.com/graphql",
-                  data=payload,
-                  headers={
-                    "Authorization": f"Bearer {token}",
-                    "Content-Type": "application/json",
-                    "Accept": "application/vnd.github+json",
-                  },
-                  method="POST",
-                )
-                try:
-                  with urllib.request.urlopen(req, timeout=timeout_seconds) as resp:
-                    result = json.loads(resp.read().decode("utf-8"))
-                except urllib.error.HTTPError as exc:
-                  # Retry transient server/rate-limit style failures.
-                  if exc.code in (408, 409, 425, 429, 500, 502, 503, 504):
-                    last_error = f"HTTP {exc.code}"
-                    if attempt < max_attempts:
-                      sleep_seconds = min(2 ** attempt, 20)
-                      print(
-                        f"GraphQL transient HTTP error ({exc.code}), retrying in {sleep_seconds}s..."
-                      )
-                      time.sleep(sleep_seconds)
-                      continue
-                  raise
-                except (urllib.error.URLError, TimeoutError) as exc:
-                  last_error = str(exc)
-                  if attempt < max_attempts:
-                    sleep_seconds = min(2 ** attempt, 20)
-                    print(f"GraphQL network error, retrying in {sleep_seconds}s...")
-                    time.sleep(sleep_seconds)
-                    continue
-                  raise
-
-                errors = result.get("errors") or []
-                if errors:
-                  # Retry on common transient GraphQL failure signals.
-                  error_text = json.dumps(errors).lower()
-                  transient = any(
-                    marker in error_text
-                    for marker in ("rate limit", "timed out", "timeout", "temporar")
-                  )
-                  if transient and attempt < max_attempts:
-                    sleep_seconds = min(2 ** attempt, 20)
-                    print(
-                      f"GraphQL transient error payload, retrying in {sleep_seconds}s..."
-                    )
-                    time.sleep(sleep_seconds)
-                    continue
-                  raise RuntimeError(f"GraphQL query failed: {json.dumps(errors)}")
-
-                return result
-
-              raise RuntimeError(f"GraphQL request failed after retries: {last_error}")
-
-          query = """
-          query($org: String!, $cursor: String) {
-            organization(login: $org) {
-              projectsV2(first: 100, after: $cursor) {
-                nodes {
-                  number
-                }
-                pageInfo {
-                  hasNextPage
-                  endCursor
-                }
-              }
-            }
-          }
-          """
-
-          existing_numbers = set()
-          cursor = None
-          seen_cursors = set()
-          page_count = 0
-          max_pages = 100
-
-          while True:
-              page_count += 1
-              if page_count > max_pages:
-                  print("Exceeded maximum pagination depth while reading projects.")
-                  sys.exit(1)
-
-              try:
-                  result = graphql_with_retry(query, {"org": org, "cursor": cursor})
-              except Exception as exc:
-                  print(str(exc))
-                  sys.exit(1)
-
-              projects = (
-                  result.get("data", {})
-                  .get("organization", {})
-                  .get("projectsV2", {})
-              )
-              for project in projects.get("nodes", []):
-                  number = project.get("number")
-                  if isinstance(number, int):
-                      existing_numbers.add(number)
-
-              page_info = projects.get("pageInfo", {})
-              if not page_info.get("hasNextPage"):
-                  break
-              next_cursor = page_info.get("endCursor")
-              if not next_cursor or next_cursor in seen_cursors:
-                  print("Detected invalid or repeated GraphQL pagination cursor.")
-                  sys.exit(1)
-              seen_cursors.add(next_cursor)
-              cursor = next_cursor
-
-          missing = [number for number in requested_numbers if number not in existing_numbers]
-          if missing:
-              print(
-                  "Project number(s) not found in datasciencecampus org: "
-                + ", ".join(str(number) for number in sorted(missing))
-              )
-              sys.exit(1)
-
-          urls = [
-              f"https://github.com/orgs/datasciencecampus/projects/{number}"
-              for number in requested_numbers
-          ]
-
-          with open(output_path, "a", encoding="utf-8") as fh:
-              fh.write(f"project_urls={json.dumps(urls)}\n")
-
-          print(f"Validated {len(requested_numbers)} project number(s).")
-
   add-issue-to-projects:
-    needs: prepare-project-urls
     runs-on: ubuntu-latest
+    environment: project-automation
     timeout-minutes: 10
-    strategy:
-      fail-fast: false
-      max-parallel: 4
-      matrix:
-        project_url: ${{ fromJSON(needs['prepare-project-urls'].outputs.project_urls) }}
     steps:
       - name: Validate app credentials
         env:
@@ -265,11 +40,184 @@ jobs:
           client-id: ${{ vars.PROJECT_HANDLER_BOT_APP_ID }}
           private-key: ${{ secrets.PROJECT_HANDLER_BOT_PEM }}
           owner: datasciencecampus
-          repositories: ${{ github.event.repository.name }}
+          repositories: ${{ github.event.client_payload.repository || github.event.repository.name }}
           permission-organization-projects: write
+          permission-issues: read
 
-      - name: Add issue to project
-        uses: actions/add-to-project@5afcf98fcd03f1c2f92c3c83f58ae24323cc57fd # v2.0.0
-        with:
-          project-url: ${{ matrix.project_url }}
-          github-token: ${{ steps.app-token.outputs.token }}
+      - name: Add issue to projects (Python)
+        env:
+          PROJECT_NUMBERS: ${{ github.event.client_payload.project_numbers }}
+          ISSUE_NODE_ID: ${{ github.event.client_payload.issue_node_id }}
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+          GITHUB_EVENT_PATH: ${{ github.event_path }}
+        shell: python
+        run: |
+          import json
+          import os
+          import sys
+          import urllib.request
+
+          ORG = "datasciencecampus"
+
+          def graphql(token, query, variables):
+              payload = json.dumps({"query": query, "variables": variables}).encode("utf-8")
+              req = urllib.request.Request(
+                  "https://api.github.com/graphql",
+                  data=payload,
+                  headers={
+                      "Authorization": f"Bearer {token}",
+                      "Content-Type": "application/json",
+                      "Accept": "application/vnd.github+json",
+                  },
+                  method="POST",
+              )
+              with urllib.request.urlopen(req) as resp:
+                  result = json.loads(resp.read().decode("utf-8"))
+              if result.get("errors"):
+                  raise RuntimeError(json.dumps(result["errors"]))
+              return result.get("data", {})
+
+          def parse_project_numbers(raw):
+              raw = (raw or "").strip()
+              if not raw:
+                  return []
+
+              parsed = []
+              for part in raw.replace(",", "\n").splitlines():
+                  value = part.strip()
+                  if not value:
+                      continue
+                  if value.startswith("[") and value.endswith("]"):
+                      value = value[1:-1].strip().strip('"\'')
+                  if not value.isdigit():
+                      raise ValueError(f"Invalid project number: {value}")
+                  project_number = int(value)
+                  if project_number not in parsed:
+                      parsed.append(project_number)
+
+              if len(parsed) > 100:
+                  raise ValueError("Too many project numbers requested. Maximum is 100.")
+
+              return parsed
+
+          def get_issue_node_id(input_node_id):
+              if input_node_id:
+                  return input_node_id
+              event_path = os.environ.get("GITHUB_EVENT_PATH", "")
+              if not event_path:
+                  return ""
+              with open(event_path, "r", encoding="utf-8") as fh:
+                  event = json.load(fh)
+              return event.get("issue", {}).get("node_id", "")
+
+          def get_project(token, number):
+              query = """
+              query($org: String!, $number: Int!) {
+                organization(login: $org) {
+                  projectV2(number: $number) {
+                    id
+                    number
+                    title
+                  }
+                }
+              }
+              """
+              data = graphql(token, query, {"org": ORG, "number": number})
+              return data.get("organization", {}).get("projectV2")
+
+          def find_existing_item(token, project_id, issue_node_id):
+              query = """
+              query($projectId: ID!, $cursor: String) {
+                node(id: $projectId) {
+                  ... on ProjectV2 {
+                    items(first: 100, after: $cursor) {
+                      nodes {
+                        id
+                        content {
+                          ... on Issue {
+                            id
+                          }
+                        }
+                      }
+                      pageInfo {
+                        hasNextPage
+                        endCursor
+                      }
+                    }
+                  }
+                }
+              }
+              """
+              cursor = None
+              while True:
+                  data = graphql(token, query, {"projectId": project_id, "cursor": cursor})
+                  items = data.get("node", {}).get("items", {})
+                  for item in items.get("nodes", []):
+                      content = item.get("content") or {}
+                      if content.get("id") == issue_node_id:
+                          return item.get("id")
+                  page_info = items.get("pageInfo", {})
+                  if not page_info.get("hasNextPage"):
+                      return ""
+                  cursor = page_info.get("endCursor")
+
+          def add_item(token, project_id, issue_node_id):
+              mutation = """
+              mutation($projectId: ID!, $contentId: ID!) {
+                addProjectV2ItemById(input: {projectId: $projectId, contentId: $contentId}) {
+                  item {
+                    id
+                  }
+                }
+              }
+              """
+              data = graphql(
+                  token,
+                  mutation,
+                  {"projectId": project_id, "contentId": issue_node_id},
+              )
+              return (
+                  data.get("addProjectV2ItemById", {})
+                  .get("item", {})
+                  .get("id", "")
+              )
+
+          token = os.environ.get("GITHUB_TOKEN", "")
+          try:
+              project_numbers = parse_project_numbers(os.environ.get("PROJECT_NUMBERS", ""))
+          except ValueError as exc:
+              print(str(exc))
+              sys.exit(1)
+
+          issue_node_id = get_issue_node_id(os.environ.get("ISSUE_NODE_ID", ""))
+
+          if not token:
+              print("Missing app token.")
+              sys.exit(1)
+
+          if not project_numbers:
+              print("No project numbers were provided.")
+              sys.exit(1)
+
+          if not issue_node_id:
+              print("Unable to resolve issue node id from input or event payload.")
+              sys.exit(1)
+
+          for project_number in project_numbers:
+              project = get_project(token, project_number)
+              if not project:
+                  print(f"Project #{project_number} was not found in {ORG}.")
+                  sys.exit(1)
+
+              project_id = project["id"]
+              existing_item_id = find_existing_item(token, project_id, issue_node_id)
+              if existing_item_id:
+                  print(f"Issue already present in project #{project_number}.")
+                  continue
+
+              new_item_id = add_item(token, project_id, issue_node_id)
+              if not new_item_id:
+                  print(f"Failed to add issue to project #{project_number}.")
+                  sys.exit(1)
+
+              print(f"Added issue to project #{project_number}.")

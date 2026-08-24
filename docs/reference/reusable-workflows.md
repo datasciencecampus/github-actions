@@ -4,12 +4,15 @@ This page lists the reusable workflows in this repository and their caller-facin
 
 ## Shared credential model
 
-These workflows use org-scoped credentials inside the called workflow:
+These called workflows use org-scoped credentials inside the called workflow:
 
 - `PROJECT_HANDLER_BOT_APP_ID` (Actions variable)
 - `PROJECT_HANDLER_BOT_PEM` (Actions secret)
 
-Callers do not pass through secrets.
+Dispatch caller workflows should use router bot credentials to send repository dispatch events:
+
+- `PROJECT_ROUTER_BOT_APP_ID` (Actions variable)
+- `PROJECT_ROUTER_BOT_PEM` (Actions secret)
 
 ## add-issue-to-projects
 
@@ -19,13 +22,15 @@ Workflow file:
 
 ### add-issue-to-projects trigger contract
 
-- `workflow_call`
+- `repository_dispatch` with event type `add-issue-to-projects`
 
-### add-issue-to-projects inputs
+### add-issue-to-projects payload fields
 
-- `project_numbers` (required, string)
-  - Comma-separated or newline-separated project numbers
-  - Example: `194,205`
+For `repository_dispatch`, pass values in `client_payload`:
+
+- `project_numbers` (required): comma-separated or newline-separated project numbers
+- `issue_node_id` (required): issue node id
+- `repository` (optional): source repository name for token scoping. If omitted, defaults to this repository name.
 
 ### add-issue-to-projects behavior
 
@@ -48,17 +53,15 @@ Workflow file:
 
 ### add-pr-to-projects trigger contract
 
-- `workflow_call`
+- `repository_dispatch` with event type `add-pr-to-projects`
 
-### add-pr-to-projects inputs
+### add-pr-to-projects payload fields
 
-- `project_field_values` (required, string)
-  - A list of mappings: project, field, value
-  - Recommended format: JSON array string
-  - Example:
-    - `[{"project":194,"field":"Status","value":"In review"}]`
-- `pull_request_node_id` (optional, string)
-  - If omitted, read from event payload
+For `repository_dispatch`, pass values in `client_payload`:
+
+- `project_field_values` (required): JSON string list of mappings
+- `pull_request_node_id` (required): pull request node id
+- `repository` (optional): source repository name for token scoping. If omitted, defaults to this repository name.
 
 ### add-pr-to-projects behavior
 
