@@ -38,7 +38,7 @@ Workflow file: `.github/workflows/add-issue-to-projects.yml`
 - This is the public reusable workflow for the issue flow.
 - If `implementation_ref` is omitted, the workflow reads `configs/implementation-ref.json` from the invoked workflow revision, turns `implementation_version` into a `v...` tag, and dispatches that release-managed ref.
 - Use `implementation_ref` only to override that release-managed dispatch target with a specific branch or tag.
-- It is most useful for workflows in this repository, or same-organization callers that intentionally expose the dispatch secret to the called workflow.
+- It is most useful for workflows in this repository, or same-organization callers that intentionally provide the dispatch secret to the public reusable workflow.
 
 ## add-issue-to-projects-impl
 

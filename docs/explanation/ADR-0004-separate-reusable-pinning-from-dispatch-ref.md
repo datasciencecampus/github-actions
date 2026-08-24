@@ -11,7 +11,7 @@ This repository now exposes public reusable workflows for project routing:
 - `add-pr-to-projects`
 
 These public workflows do not mutate ProjectsV2 directly. Instead, they mint a
-router token and dispatch internal implementation workflows:
+dispatch token and dispatch internal implementation workflows:
 
 - `add-issue-to-projects-impl`
 - `add-pr-to-projects-impl`
@@ -112,7 +112,7 @@ Negative:
 4. Remove the internal `workflow_dispatch` hop and execute all logic directly in the
    public reusable workflow
    Rejected because the current split preserves the privileged implementation
-   boundary and keeps router concerns separate from project-mutation concerns.
+   boundary and keeps dispatch concerns separate from project-mutation concerns.
 
 5. Keep a generic `ref` input on the public reusable workflow
    Rejected because it overloads two different meanings: reusable workflow revision
