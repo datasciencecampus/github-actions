@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.1](https://github.com/datasciencecampus/github-actions/compare/v1.2.0...v1.2.1) (2026-08-24)
+
+
+### Bug Fixes
+
+* update implementation reference handling in workflows and documentation ([d664403](https://github.com/datasciencecampus/github-actions/commit/d664403ed3b78a4d8ae3ab67d90bebaf38cc8041))
+
 ## [1.2.0](https://github.com/datasciencecampus/github-actions/compare/v1.1.0...v1.2.0) (2026-08-24)
 
 
