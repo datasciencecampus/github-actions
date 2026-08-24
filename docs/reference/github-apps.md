@@ -4,7 +4,7 @@ This repository uses two GitHub Apps with distinct responsibilities and permissi
 
 ## PROJECT_ROUTER_BOT
 
-**Purpose:** Allows other repositories in the org to trigger workflows in this repository.
+**Purpose:** Allows approved caller repositories to trigger workflows in this repository.
 
 - `PROJECT_ROUTER_BOT_APP_ID`: Actions variable.
 - `PROJECT_ROUTER_BOT_PRIVATE_KEY`: Actions secret.
@@ -21,7 +21,7 @@ The `actions: write` permission is the minimum required to call
 [ADR-0002](../explanation/ADR-0002-workflow-dispatch-over-repository-dispatch.md)
 for why `workflow_dispatch` was chosen over `repository_dispatch`.
 
-**Used in:** caller workflows in repositories across the organisation (see how-to guides).
+**Used in:** caller workflows in approved repositories that are provisioned for this integration (see how-to guides).
 
 ---
 

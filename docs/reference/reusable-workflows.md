@@ -4,7 +4,7 @@ This page lists the workflows in this repository and their caller-facing contrac
 
 ## Shared credential model
 
-Callers use the router bot credentials to dispatch workflows:
+Authorized callers use the router bot credentials to dispatch workflows:
 
 - `PROJECT_ROUTER_BOT_APP_ID` (Actions variable, org-level)
 - `PROJECT_ROUTER_BOT_PRIVATE_KEY` (Actions secret, org-level)
