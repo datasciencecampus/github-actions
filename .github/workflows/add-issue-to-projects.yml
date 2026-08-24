@@ -16,25 +16,15 @@ permissions:
 jobs:
   prepare-project-urls:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     outputs:
       project_urls: ${{ steps.build.outputs.project_urls }}
     steps:
       - name: Validate app credentials
-        env:
-          PROJECT_HANDLER_BOT_APP_ID: ${{ vars.PROJECT_HANDLER_BOT_APP_ID }}
-          PROJECT_HANDLER_BOT_PEM: ${{ secrets.PROJECT_HANDLER_BOT_PEM }}
-        run: |
-          if [ -z "$PROJECT_HANDLER_BOT_APP_ID" ]; then
-            echo "Missing variable PROJECT_HANDLER_BOT_APP_ID."
-            echo "Create it as an organization Actions variable and grant access to calling repositories."
-            exit 1
-          fi
-
-          if [ -z "$PROJECT_HANDLER_BOT_PEM" ]; then
-            echo "Missing secret PROJECT_HANDLER_BOT_PEM."
-            echo "Create it as an organization Actions secret and grant access to calling repositories."
-            exit 1
-          fi
+        uses: ./.github/actions/validate-project-handler-app-credentials
+        with:
+          app-id: ${{ vars.PROJECT_HANDLER_BOT_APP_ID }}
+          app-pem: ${{ secrets.PROJECT_HANDLER_BOT_PEM }}
 
       - name: Create GitHub App token for validation
         id: app-token-validate
@@ -55,12 +45,27 @@ jobs:
         run: |
           import json
           import os
+          import time
           import sys
+          import urllib.error
           import urllib.request
 
           org = "datasciencecampus"
           raw = os.environ.get("PROJECT_NUMBERS", "")
           token = os.environ.get("GITHUB_TOKEN", "")
+          output_path = os.environ.get("GITHUB_OUTPUT", "")
+
+          if not token:
+            print("Missing GITHUB_TOKEN for project validation.")
+            sys.exit(1)
+
+          if not output_path:
+            print("Missing GITHUB_OUTPUT path.")
+            sys.exit(1)
+
+          if len(raw) > 10000:
+            print("Input project_numbers is too large.")
+            sys.exit(1)
 
           requested = []
           for part in raw.replace(",", "\n").splitlines():
@@ -78,6 +83,70 @@ jobs:
               sys.exit(1)
 
           requested_numbers = [int(value) for value in requested]
+            if len(requested_numbers) > 100:
+              print("Too many project numbers requested. Maximum is 100.")
+              sys.exit(1)
+
+            def graphql_with_retry(query, variables, max_attempts=5, timeout_seconds=20):
+              last_error = None
+              for attempt in range(1, max_attempts + 1):
+                payload = json.dumps(
+                  {"query": query, "variables": variables}
+                ).encode("utf-8")
+                req = urllib.request.Request(
+                  "https://api.github.com/graphql",
+                  data=payload,
+                  headers={
+                    "Authorization": f"Bearer {token}",
+                    "Content-Type": "application/json",
+                    "Accept": "application/vnd.github+json",
+                  },
+                  method="POST",
+                )
+                try:
+                  with urllib.request.urlopen(req, timeout=timeout_seconds) as resp:
+                    result = json.loads(resp.read().decode("utf-8"))
+                except urllib.error.HTTPError as exc:
+                  # Retry transient server/rate-limit style failures.
+                  if exc.code in (408, 409, 425, 429, 500, 502, 503, 504):
+                    last_error = f"HTTP {exc.code}"
+                    if attempt < max_attempts:
+                      sleep_seconds = min(2 ** attempt, 20)
+                      print(
+                        f"GraphQL transient HTTP error ({exc.code}), retrying in {sleep_seconds}s..."
+                      )
+                      time.sleep(sleep_seconds)
+                      continue
+                  raise
+                except (urllib.error.URLError, TimeoutError) as exc:
+                  last_error = str(exc)
+                  if attempt < max_attempts:
+                    sleep_seconds = min(2 ** attempt, 20)
+                    print(f"GraphQL network error, retrying in {sleep_seconds}s...")
+                    time.sleep(sleep_seconds)
+                    continue
+                  raise
+
+                errors = result.get("errors") or []
+                if errors:
+                  # Retry on common transient GraphQL failure signals.
+                  error_text = json.dumps(errors).lower()
+                  transient = any(
+                    marker in error_text
+                    for marker in ("rate limit", "timed out", "timeout", "temporar")
+                  )
+                  if transient and attempt < max_attempts:
+                    sleep_seconds = min(2 ** attempt, 20)
+                    print(
+                      f"GraphQL transient error payload, retrying in {sleep_seconds}s..."
+                    )
+                    time.sleep(sleep_seconds)
+                    continue
+                  raise RuntimeError(f"GraphQL query failed: {json.dumps(errors)}")
+
+                return result
+
+              raise RuntimeError(f"GraphQL request failed after retries: {last_error}")
 
           query = """
           query($org: String!, $cursor: String) {
@@ -97,27 +166,20 @@ jobs:
 
           existing_numbers = set()
           cursor = None
+          seen_cursors = set()
+          page_count = 0
+          max_pages = 100
 
           while True:
-              payload = json.dumps(
-                  {"query": query, "variables": {"org": org, "cursor": cursor}}
-              ).encode("utf-8")
-              req = urllib.request.Request(
-                  "https://api.github.com/graphql",
-                  data=payload,
-                  headers={
-                      "Authorization": f"Bearer {token}",
-                      "Content-Type": "application/json",
-                      "Accept": "application/vnd.github+json",
-                  },
-                  method="POST",
-              )
+              page_count += 1
+              if page_count > max_pages:
+                  print("Exceeded maximum pagination depth while reading projects.")
+                  sys.exit(1)
 
-              with urllib.request.urlopen(req) as resp:
-                  result = json.loads(resp.read().decode("utf-8"))
-
-              if result.get("errors"):
-                  print(f"GraphQL query failed: {json.dumps(result['errors'])}")
+              try:
+                  result = graphql_with_retry(query, {"org": org, "cursor": cursor})
+              except Exception as exc:
+                  print(str(exc))
                   sys.exit(1)
 
               projects = (
@@ -133,13 +195,18 @@ jobs:
               page_info = projects.get("pageInfo", {})
               if not page_info.get("hasNextPage"):
                   break
-              cursor = page_info.get("endCursor")
+              next_cursor = page_info.get("endCursor")
+              if not next_cursor or next_cursor in seen_cursors:
+                  print("Detected invalid or repeated GraphQL pagination cursor.")
+                  sys.exit(1)
+              seen_cursors.add(next_cursor)
+              cursor = next_cursor
 
           missing = [number for number in requested_numbers if number not in existing_numbers]
           if missing:
               print(
                   "Project number(s) not found in datasciencecampus org: "
-                  + ", ".join(str(number) for number in missing)
+                + ", ".join(str(number) for number in sorted(missing))
               )
               sys.exit(1)
 
@@ -148,7 +215,6 @@ jobs:
               for number in requested_numbers
           ]
 
-          output_path = os.environ["GITHUB_OUTPUT"]
           with open(output_path, "a", encoding="utf-8") as fh:
               fh.write(f"project_urls={json.dumps(urls)}\n")
 
@@ -157,27 +223,18 @@ jobs:
   add-issue-to-projects:
     needs: prepare-project-urls
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     strategy:
       fail-fast: false
+      max-parallel: 4
       matrix:
         project_url: ${{ fromJSON(needs['prepare-project-urls'].outputs.project_urls) }}
     steps:
       - name: Validate app credentials
-        env:
-          PROJECT_HANDLER_BOT_APP_ID: ${{ vars.PROJECT_HANDLER_BOT_APP_ID }}
-          PROJECT_HANDLER_BOT_PEM: ${{ secrets.PROJECT_HANDLER_BOT_PEM }}
-        run: |
-          if [ -z "$PROJECT_HANDLER_BOT_APP_ID" ]; then
-            echo "Missing variable PROJECT_HANDLER_BOT_APP_ID."
-            echo "Create it as an organization Actions variable and grant access to calling repositories."
-            exit 1
-          fi
-
-          if [ -z "$PROJECT_HANDLER_BOT_PEM" ]; then
-            echo "Missing secret PROJECT_HANDLER_BOT_PEM."
-            echo "Create it as an organization Actions secret and grant access to calling repositories."
-            exit 1
-          fi
+        uses: ./.github/actions/validate-project-handler-app-credentials
+        with:
+          app-id: ${{ vars.PROJECT_HANDLER_BOT_APP_ID }}
+          app-pem: ${{ secrets.PROJECT_HANDLER_BOT_PEM }}
 
       - name: Create GitHub App token
         id: app-token
