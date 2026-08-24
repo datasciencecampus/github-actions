@@ -21,7 +21,7 @@ Workflow file: `.github/workflows/add-issue-to-projects.yml`
 
 ### Issue Call Inputs
 
-- `ref`: required. Git ref in this repository to dispatch.
+- `ref`: optional. Git ref in this repository to dispatch. Defaults to the commit SHA of the reusable workflow run.
 - `repository`: required. Source repository name.
 - `issue_node_id`: required. Node ID of the issue to add.
 - `project_field_values`: required. JSON array of project mappings.
@@ -36,6 +36,7 @@ Workflow file: `.github/workflows/add-issue-to-projects.yml`
 ### Issue Call Notes
 
 - This is the public reusable workflow for the issue flow.
+- It defaults to dispatching the same commit SHA the reusable workflow itself was invoked from, which keeps release-tag callers pinned to matching implementation code.
 - It is most useful for workflows in this repository, or same-organization callers that intentionally expose the router-bot secret to the called workflow.
 
 ## add-issue-to-projects-impl
