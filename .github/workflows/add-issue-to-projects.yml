@@ -3,6 +3,10 @@ name: Add Issue To Projects
 'on':
   workflow_call:
     inputs:
+      implementation_ref:
+        description: Branch or tag ref to use when dispatching the internal implementation workflow.
+        required: false
+        type: string
       repository:
         description: Repository name the issue belongs to.
         required: true
@@ -35,22 +39,27 @@ jobs:
     steps:
       - name: Validate dispatch inputs
         env:
+          IMPLEMENTATION_REF: ${{ inputs.implementation_ref }}
           WORKFLOW_REF: ${{ github.workflow_ref }}
           TARGET_REPOSITORY: ${{ inputs.repository }}
           ISSUE_NODE_ID: ${{ inputs.issue_node_id }}
         run: |
-          ref="${WORKFLOW_REF##*@}"
-          case "$ref" in
-            refs/heads/*)
-              ref="${ref#refs/heads/}"
-              ;;
-            refs/tags/*)
-              ref="${ref#refs/tags/}"
-              ;;
-          esac
+          ref="$IMPLEMENTATION_REF"
+
+          if [ -z "$ref" ]; then
+            ref="${WORKFLOW_REF##*@}"
+            case "$ref" in
+              refs/heads/*)
+                ref="${ref#refs/heads/}"
+                ;;
+              refs/tags/*)
+                ref="${ref#refs/tags/}"
+                ;;
+            esac
+          fi
 
           if [ -z "$ref" ] || [ "$ref" = "$WORKFLOW_REF" ]; then
-            echo "Unable to resolve a dispatchable workflow ref from '$WORKFLOW_REF'."
+            echo "Unable to resolve a dispatchable workflow ref."
             exit 1
           fi
 

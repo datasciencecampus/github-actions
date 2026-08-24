@@ -32,14 +32,17 @@ permissions:
 
 jobs:
   add-pr-to-projects:
-    uses: datasciencecampus/github-actions/.github/workflows/add-pr-to-projects.yml@v0.2.0
+    uses: datasciencecampus/github-actions/.github/workflows/add-pr-to-projects.yml@<commit-sha>
     secrets:
       PROJECT_ROUTER_BOT_PRIVATE_KEY: ${{ secrets.PROJECT_ROUTER_BOT_PRIVATE_KEY }}
     with:
+      implementation_ref: v1.0.1 # x-release-please-version
       repository: ${{ github.event.repository.name }}
       pull_request_node_id: ${{ github.event.pull_request.node_id }}
       project_field_values: '[{"project":194,"field":"Status","value":"Review"}]'
 ```
+
+If your organisation requires SHA pinning, pin the reusable workflow with `@<commit-sha>` and set `implementation_ref` to the branch or tag that should be dispatched internally.
 
 ## Input format
 
