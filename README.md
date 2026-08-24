@@ -2,6 +2,15 @@
 
 Reusable workflows for the Data Science Campus GitHub organization.
 
+This repository is the sister repository to [ONSdigital/ons-github-actions](https://github.com/ONSdigital/ons-github-actions).
+
+- `ONSdigital/ons-github-actions` contains reusable workflows that are broadly applicable.
+- This repository contains Data Science Campus org-specific workflows that require organization-scoped variables, secrets, or app credentials.
+
+Example org-specific use case:
+
+- [Add issue to projects](.github/workflows/add-issue-to-projects.yml), which requires org-scoped GitHub App credentials to add issue items to `datasciencecampus` Projects.
+
 ## Pre-commit hook (zizmor)
 
 This repository includes a pre-commit hook configuration for `zizmor` in [.pre-commit-config.yaml](.pre-commit-config.yaml).
