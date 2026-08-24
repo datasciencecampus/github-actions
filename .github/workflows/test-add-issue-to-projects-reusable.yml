@@ -1,19 +1,17 @@
 name: Test Add Issue To Projects Reusable Workflow
 
 'on':
-  issues:
-    types: [opened, reopened]
   workflow_dispatch:
     inputs:
       project_field_values:
         description: >-
           JSON list of project mappings, for example
           [{"project":194}] or [{"project":194,"field":"Status","value":"Review"}]
-        required: false
+        required: true
         type: string
       issue_node_id:
-        description: Optional issue node id for manual tests.
-        required: false
+        description: Issue node id for a manual test run.
+        required: true
         type: string
 
 permissions:
@@ -26,5 +24,5 @@ jobs:
       PROJECT_ROUTER_BOT_PRIVATE_KEY: ${{ secrets.PROJECT_ROUTER_BOT_PRIVATE_KEY }}
     with:
       repository: ${{ github.event.repository.name }}
-      issue_node_id: ${{ inputs.issue_node_id || github.event.issue.node_id || '' }}
-      project_field_values: ${{ inputs.project_field_values || '[{"project":194}]' }}
+      issue_node_id: ${{ inputs.issue_node_id }}
+      project_field_values: ${{ inputs.project_field_values }}

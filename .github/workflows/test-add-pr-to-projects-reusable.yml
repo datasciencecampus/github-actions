@@ -1,19 +1,17 @@
 name: Test Add Pull Request To Projects Reusable Workflow
 
 'on':
-  pull_request:
-    types: [opened, reopened]
   workflow_dispatch:
     inputs:
       project_field_values:
         description: >-
           JSON list of mappings, for example
           [{"project":194,"field":"Status","value":"Review"}]
-        required: false
+        required: true
         type: string
       pull_request_node_id:
-        description: Optional pull request node id for manual tests.
-        required: false
+        description: Pull request node id for a manual test run.
+        required: true
         type: string
 
 permissions:
@@ -26,5 +24,5 @@ jobs:
       PROJECT_ROUTER_BOT_PRIVATE_KEY: ${{ secrets.PROJECT_ROUTER_BOT_PRIVATE_KEY }}
     with:
       repository: ${{ github.event.repository.name }}
-      pull_request_node_id: ${{ inputs.pull_request_node_id || github.event.pull_request.node_id || '' }}
-      project_field_values: ${{ inputs.project_field_values || '[{"project":194,"field":"Status","value":"Review"}]' }}
+      pull_request_node_id: ${{ inputs.pull_request_node_id }}
+      project_field_values: ${{ inputs.project_field_values }}
