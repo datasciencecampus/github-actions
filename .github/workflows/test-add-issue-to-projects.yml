@@ -5,8 +5,10 @@ name: Test Add Issue To Projects
     types: [opened, reopened]
   workflow_dispatch:
     inputs:
-      project_numbers:
-        description: Comma or newline separated project numbers for test run.
+      project_field_values:
+        description: >-
+          JSON list of project mappings, for example
+          [{"project":194}] or [{"project":194,"field":"Status","value":"Review"}]
         required: false
         type: string
       issue_node_id:
@@ -59,26 +61,28 @@ jobs:
       - name: Dispatch add-issue-to-projects workflow
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
-          PROJECT_NUMBERS: ${{ inputs.project_numbers || vars.TEST_ISSUE_PROJECT_NUMBERS || '194,205' }}
+          PROJECT_FIELD_VALUES: ${{ inputs.project_field_values || vars.TEST_ISSUE_PROJECT_FIELD_VALUES || '[{"project":194}]' }}
           ISSUE_NODE_ID: ${{ inputs.issue_node_id || github.event.issue.node_id || '' }}
           REPOSITORY_NAME: ${{ github.event.repository.name }}
+          REF: ${{ github.ref_name }}
         run: |
           jq -n \
+            --arg ref "$REF" \
             --arg repo "$REPOSITORY_NAME" \
             --arg issue_node_id "$ISSUE_NODE_ID" \
-            --arg project_numbers "$PROJECT_NUMBERS" \
+            --arg project_field_values "$PROJECT_FIELD_VALUES" \
             '{
-              event_type: "add-issue-to-projects",
-              client_payload: {
+              ref: $ref,
+              inputs: {
                 repository: $repo,
                 issue_node_id: $issue_node_id,
-                project_numbers: $project_numbers
+                project_field_values: $project_field_values
               }
             }' > payload.json
 
-          curl -sS -L \
+          curl -sS -L --fail-with-body \
             -X POST \
             -H "Accept: application/vnd.github+json" \
             -H "Authorization: Bearer ${GH_TOKEN}" \
-            https://api.github.com/repos/datasciencecampus/github-actions/dispatches \
+            https://api.github.com/repos/datasciencecampus/github-actions/actions/workflows/add-issue-to-projects.yml/dispatches \
             -d @payload.json

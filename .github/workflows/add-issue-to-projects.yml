@@ -1,20 +1,34 @@
-name: Add Issue To Org Projects
+name: Add Issue To Projects
 
 'on':
-  repository_dispatch:
-    types:
-      - add-issue-to-projects
+  workflow_dispatch:
+    inputs:
+      repository:
+        description: Repository name the issue belongs to.
+        required: false
+        type: string
+      issue_node_id:
+        description: Node ID of the issue to add to projects.
+        required: true
+        type: string
+      project_field_values:
+        description: >-
+          JSON list of project mappings, for example
+          [{"project":194}] or [{"project":194,"field":"Status","value":"Review"}]
+        required: true
+        type: string
+      organization:
+        description: Organization login. Defaults to the repository owner.
+        required: false
+        type: string
 
 permissions:
   contents: read
-  issues: read
-  repository-projects: write
 
 jobs:
   add-issue-to-projects:
     runs-on: ubuntu-latest
     environment: project-automation
-    timeout-minutes: 10
     steps:
       - name: Validate app credentials
         env:
@@ -39,17 +53,17 @@ jobs:
         with:
           client-id: ${{ vars.PROJECT_HANDLER_BOT_APP_ID }}
           private-key: ${{ secrets.PROJECT_HANDLER_BOT_PEM }}
-          owner: datasciencecampus
-          repositories: ${{ github.event.client_payload.repository || github.event.repository.name }}
+          owner: ${{ inputs.organization || github.event.repository.owner.login }}
+          repositories: ${{ inputs.repository || github.event.repository.name }}
           permission-organization-projects: write
           permission-issues: read
 
-      - name: Add issue to projects (Python)
+      - name: Add issue to projects and set field values (Python)
         env:
-          PROJECT_NUMBERS: ${{ github.event.client_payload.project_numbers }}
-          ISSUE_NODE_ID: ${{ github.event.client_payload.issue_node_id }}
+          GITHUB_ORG: ${{ inputs.organization || github.event.repository.owner.login }}
+          PROJECT_FIELD_VALUES: ${{ inputs.project_field_values }}
+          ISSUE_NODE_ID: ${{ inputs.issue_node_id }}
           GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
-          GITHUB_EVENT_PATH: ${{ github.event_path }}
         shell: python
         run: |
           import json
@@ -57,7 +71,7 @@ jobs:
           import sys
           import urllib.request
 
-          ORG = "datasciencecampus"
+          ORG = os.environ.get("GITHUB_ORG", "").strip()
 
           def graphql(token, query, variables):
               payload = json.dumps({"query": query, "variables": variables}).encode("utf-8")
@@ -77,38 +91,47 @@ jobs:
                   raise RuntimeError(json.dumps(result["errors"]))
               return result.get("data", {})
 
-          def parse_project_numbers(raw):
+          def parse_project_field_values(raw):
               raw = (raw or "").strip()
               if not raw:
                   return []
 
-              parsed = []
-              for part in raw.replace(",", "\n").splitlines():
-                  value = part.strip()
-                  if not value:
+              # JSON list is preferred when passed by callers.
+              try:
+                  parsed = json.loads(raw)
+                  if isinstance(parsed, dict):
+                      return [parsed]
+                  if isinstance(parsed, list):
+                      return parsed
+              except Exception:
+                  pass
+
+              # Fallback for YAML-like blocks:
+              # - project: 123
+              #   field: Status
+              #   value: Review
+              entries = []
+              current = {}
+              for original_line in raw.splitlines():
+                  line = original_line.strip()
+                  if not line:
                       continue
+                  if line.startswith("- "):
+                      if current:
+                          entries.append(current)
+                          current = {}
+                      line = line[2:].strip()
+                  if ":" not in line:
+                      continue
+                  key, value = line.split(":", 1)
+                  key = key.strip()
+                  value = value.strip().strip("\"'")
                   if value.startswith("[") and value.endswith("]"):
-                      value = value[1:-1].strip().strip('"\'')
-                  if not value.isdigit():
-                      raise ValueError(f"Invalid project number: {value}")
-                  project_number = int(value)
-                  if project_number not in parsed:
-                      parsed.append(project_number)
-
-              if len(parsed) > 100:
-                  raise ValueError("Too many project numbers requested. Maximum is 100.")
-
-              return parsed
-
-          def get_issue_node_id(input_node_id):
-              if input_node_id:
-                  return input_node_id
-              event_path = os.environ.get("GITHUB_EVENT_PATH", "")
-              if not event_path:
-                  return ""
-              with open(event_path, "r", encoding="utf-8") as fh:
-                  event = json.load(fh)
-              return event.get("issue", {}).get("node_id", "")
+                      value = value[1:-1].strip().strip("\"'")
+                  current[key] = value
+              if current:
+                  entries.append(current)
+              return entries
 
           def get_project(token, number):
               query = """
@@ -118,6 +141,24 @@ jobs:
                     id
                     number
                     title
+                    fields(first: 100) {
+                      nodes {
+                        ... on ProjectV2FieldCommon {
+                          id
+                          name
+                          dataType
+                        }
+                        ... on ProjectV2SingleSelectField {
+                          id
+                          name
+                          dataType
+                          options {
+                            id
+                            name
+                          }
+                        }
+                      }
+                    }
                   }
                 }
               }
@@ -182,42 +223,240 @@ jobs:
                   .get("id", "")
               )
 
-          token = os.environ.get("GITHUB_TOKEN", "")
-          try:
-              project_numbers = parse_project_numbers(os.environ.get("PROJECT_NUMBERS", ""))
-          except ValueError as exc:
-              print(str(exc))
-              sys.exit(1)
+          def get_or_create_item(token, project_id, issue_node_id):
+              existing_item_id = find_existing_item(token, project_id, issue_node_id)
+              if existing_item_id:
+                  return existing_item_id, False
+              new_item_id = add_item(token, project_id, issue_node_id)
+              if not new_item_id:
+                  raise RuntimeError("Failed to add issue to project")
+              return new_item_id, True
 
-          issue_node_id = get_issue_node_id(os.environ.get("ISSUE_NODE_ID", ""))
+          def update_single_select(token, project_id, item_id, field_id, option_id):
+              mutation = """
+              mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $optionId: String!) {
+                updateProjectV2ItemFieldValue(
+                  input: {
+                    projectId: $projectId
+                    itemId: $itemId
+                    fieldId: $fieldId
+                    value: {singleSelectOptionId: $optionId}
+                  }
+                ) {
+                  projectV2Item {
+                    id
+                  }
+                }
+              }
+              """
+              graphql(
+                  token,
+                  mutation,
+                  {
+                      "projectId": project_id,
+                      "itemId": item_id,
+                      "fieldId": field_id,
+                      "optionId": option_id,
+                  },
+              )
+
+          def update_text(token, project_id, item_id, field_id, value):
+              mutation = """
+              mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $value: String!) {
+                updateProjectV2ItemFieldValue(
+                  input: {
+                    projectId: $projectId
+                    itemId: $itemId
+                    fieldId: $fieldId
+                    value: {text: $value}
+                  }
+                ) {
+                  projectV2Item {
+                    id
+                  }
+                }
+              }
+              """
+              graphql(
+                  token,
+                  mutation,
+                  {
+                      "projectId": project_id,
+                      "itemId": item_id,
+                      "fieldId": field_id,
+                      "value": str(value),
+                  },
+              )
+
+          def normalize_project_number(project_value):
+              project_number_str = str(project_value).strip()
+              if project_number_str.startswith("[") and project_number_str.endswith("]"):
+                  project_number_str = project_number_str[1:-1].strip().strip("\"'")
+              if not project_number_str.isdigit():
+                  return None
+              return int(project_number_str)
+
+          def build_project_cache(token, mappings):
+              numbers = []
+              for mapping in mappings:
+                  project_value = mapping.get("project")
+                  if project_value is None:
+                      continue
+                  project_number = normalize_project_number(project_value)
+                  if project_number is not None and project_number not in numbers:
+                      numbers.append(project_number)
+
+              cache = {}
+              for project_number in numbers:
+                  cache[project_number] = get_project(token, project_number)
+              return cache
+
+          def validate_mappings(mappings, project_cache):
+              normalized = []
+              errors = []
+
+              for idx, mapping in enumerate(mappings, start=1):
+                  if not isinstance(mapping, dict):
+                      errors.append(f"Entry {idx}: each mapping must be an object/dictionary.")
+                      continue
+
+                  project_value = mapping.get("project")
+                  field_name = str(mapping.get("field", "")).strip()
+                  field_value = str(mapping.get("value", "")).strip()
+
+                  if project_value is None:
+                      errors.append(f"Entry {idx}: missing 'project'.")
+                      continue
+
+                  project_number = normalize_project_number(project_value)
+                  if project_number is None:
+                      errors.append(
+                          f"Entry {idx}: invalid project '{project_value}'. Use a numeric project number."
+                      )
+                      continue
+
+                  project = project_cache.get(project_number)
+                  if not project:
+                      errors.append(
+                          f"Entry {idx}: project #{project_number} was not found in {ORG}."
+                      )
+                      continue
+
+                  # No field specified — add to project only.
+                  if not field_name:
+                      normalized.append(
+                          {
+                              "index": idx,
+                              "project_number": project_number,
+                              "project": project,
+                              "field_name": "",
+                              "field_value": "",
+                              "field_id": "",
+                              "data_type": "",
+                              "single_select_option_id": "",
+                          }
+                      )
+                      continue
+
+                  if not field_value:
+                      errors.append(f"Entry {idx}: missing 'value'.")
+                      continue
+
+                  fields = project.get("fields", {}).get("nodes", [])
+                  target_field = None
+                  for field in fields:
+                      if str(field.get("name", "")).lower() == field_name.lower():
+                          target_field = field
+                          break
+
+                  if not target_field:
+                      errors.append(
+                          f"Entry {idx}: field '{field_name}' was not found in project #{project_number}."
+                      )
+                      continue
+
+                  field_id = target_field.get("id")
+                  data_type = str(target_field.get("dataType", "")).upper()
+                  options = target_field.get("options")
+
+                  option_id = ""
+                  if isinstance(options, list):
+                      for option in options:
+                          if str(option.get("name", "")).lower() == field_value.lower():
+                              option_id = option.get("id", "")
+                              break
+                      if not option_id:
+                          errors.append(
+                              f"Entry {idx}: value '{field_value}' not found in field '{field_name}' options."
+                          )
+                          continue
+
+                  normalized.append(
+                      {
+                          "index": idx,
+                          "project_number": project_number,
+                          "project": project,
+                          "field_name": field_name,
+                          "field_value": field_value,
+                          "field_id": field_id,
+                          "data_type": data_type,
+                          "single_select_option_id": option_id,
+                      }
+                  )
+
+              return normalized, errors
+
+          token = os.environ.get("GITHUB_TOKEN", "")
+          mappings = parse_project_field_values(os.environ.get("PROJECT_FIELD_VALUES", ""))
+          issue_node_id = os.environ.get("ISSUE_NODE_ID", "").strip()
 
           if not token:
               print("Missing app token.")
               sys.exit(1)
 
-          if not project_numbers:
-              print("No project numbers were provided.")
+          if not ORG:
+              print("Missing organization name. Provide it in the workflow dispatch payload as 'organization'.")
+              sys.exit(1)
+
+          if not mappings:
+              print("No project field mappings were provided.")
               sys.exit(1)
 
           if not issue_node_id:
-              print("Unable to resolve issue node id from input or event payload.")
+              print("Missing issue node id.")
               sys.exit(1)
 
-          for project_number in project_numbers:
-              project = get_project(token, project_number)
-              if not project:
-                  print(f"Project #{project_number} was not found in {ORG}.")
-                  sys.exit(1)
+          project_cache = build_project_cache(token, mappings)
+          normalized_mappings, validation_errors = validate_mappings(mappings, project_cache)
+          if validation_errors:
+              print("Validation failed for project field mappings:")
+              for err in validation_errors:
+                  print(f"- {err}")
+              sys.exit(1)
+
+          for entry in normalized_mappings:
+              idx = entry["index"]
+              project_number = entry["project_number"]
+              project = entry["project"]
+              field_name = entry["field_name"]
+              field_value = entry["field_value"]
+              field_id = entry["field_id"]
+              option_id = entry["single_select_option_id"]
 
               project_id = project["id"]
-              existing_item_id = find_existing_item(token, project_id, issue_node_id)
-              if existing_item_id:
-                  print(f"Issue already present in project #{project_number}.")
-                  continue
+              item_id, created = get_or_create_item(token, project_id, issue_node_id)
 
-              new_item_id = add_item(token, project_id, issue_node_id)
-              if not new_item_id:
-                  print(f"Failed to add issue to project #{project_number}.")
-                  sys.exit(1)
+              if field_id:
+                  if option_id:
+                      update_single_select(token, project_id, item_id, field_id, option_id)
+                  else:
+                      update_text(token, project_id, item_id, field_id, field_value)
 
-              print(f"Added issue to project #{project_number}.")
+              state = "added" if created else "already present"
+              if field_id:
+                  print(
+                      f"Entry {idx}: issue {state} in project #{project_number} and field "
+                      f"'{field_name}' set to '{field_value}'."
+                  )
+              else:
+                  print(f"Entry {idx}: issue {state} in project #{project_number}.")
