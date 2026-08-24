@@ -1,0 +1,196 @@
+name: Add Issue To Org Projects
+
+'on':
+  workflow_call:
+    inputs:
+      project_numbers:
+        description: Comma or newline separated project numbers in the datasciencecampus org.
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  issues: read
+  repository-projects: write
+
+jobs:
+  prepare-project-urls:
+    runs-on: ubuntu-latest
+    outputs:
+      project_urls: ${{ steps.build.outputs.project_urls }}
+    steps:
+      - name: Validate app credentials
+        env:
+          PROJECT_HANDLER_BOT_APP_ID: ${{ vars.PROJECT_HANDLER_BOT_APP_ID }}
+          PROJECT_HANDLER_BOT_PEM: ${{ secrets.PROJECT_HANDLER_BOT_PEM }}
+        run: |
+          if [ -z "$PROJECT_HANDLER_BOT_APP_ID" ]; then
+            echo "Missing variable PROJECT_HANDLER_BOT_APP_ID."
+            echo "Create it as an organization Actions variable and grant access to calling repositories."
+            exit 1
+          fi
+
+          if [ -z "$PROJECT_HANDLER_BOT_PEM" ]; then
+            echo "Missing secret PROJECT_HANDLER_BOT_PEM."
+            echo "Create it as an organization Actions secret and grant access to calling repositories."
+            exit 1
+          fi
+
+      - name: Create GitHub App token for validation
+        id: app-token-validate
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ vars.PROJECT_HANDLER_BOT_APP_ID }}
+          private-key: ${{ secrets.PROJECT_HANDLER_BOT_PEM }}
+          owner: datasciencecampus
+          repositories: ${{ github.event.repository.name }}
+          permission-organization-projects: read
+
+      - name: Build and validate project URLs (Python)
+        id: build
+        env:
+          PROJECT_NUMBERS: ${{ inputs.project_numbers }}
+          GITHUB_TOKEN: ${{ steps.app-token-validate.outputs.token }}
+        shell: python
+        run: |
+          import json
+          import os
+          import sys
+          import urllib.request
+
+          org = "datasciencecampus"
+          raw = os.environ.get("PROJECT_NUMBERS", "")
+          token = os.environ.get("GITHUB_TOKEN", "")
+
+          requested = []
+          for part in raw.replace(",", "\n").splitlines():
+              value = part.strip()
+              if value and value not in requested:
+                  requested.append(value)
+
+          if not requested:
+              print("No project numbers were provided.")
+              sys.exit(1)
+
+          invalid = [value for value in requested if not value.isdigit()]
+          if invalid:
+              print(f"Invalid project number(s): {', '.join(invalid)}")
+              sys.exit(1)
+
+          requested_numbers = [int(value) for value in requested]
+
+          query = """
+          query($org: String!, $cursor: String) {
+            organization(login: $org) {
+              projectsV2(first: 100, after: $cursor) {
+                nodes {
+                  number
+                }
+                pageInfo {
+                  hasNextPage
+                  endCursor
+                }
+              }
+            }
+          }
+          """
+
+          existing_numbers = set()
+          cursor = None
+
+          while True:
+              payload = json.dumps(
+                  {"query": query, "variables": {"org": org, "cursor": cursor}}
+              ).encode("utf-8")
+              req = urllib.request.Request(
+                  "https://api.github.com/graphql",
+                  data=payload,
+                  headers={
+                      "Authorization": f"Bearer {token}",
+                      "Content-Type": "application/json",
+                      "Accept": "application/vnd.github+json",
+                  },
+                  method="POST",
+              )
+
+              with urllib.request.urlopen(req) as resp:
+                  result = json.loads(resp.read().decode("utf-8"))
+
+              if result.get("errors"):
+                  print(f"GraphQL query failed: {json.dumps(result['errors'])}")
+                  sys.exit(1)
+
+              projects = (
+                  result.get("data", {})
+                  .get("organization", {})
+                  .get("projectsV2", {})
+              )
+              for project in projects.get("nodes", []):
+                  number = project.get("number")
+                  if isinstance(number, int):
+                      existing_numbers.add(number)
+
+              page_info = projects.get("pageInfo", {})
+              if not page_info.get("hasNextPage"):
+                  break
+              cursor = page_info.get("endCursor")
+
+          missing = [number for number in requested_numbers if number not in existing_numbers]
+          if missing:
+              print(
+                  "Project number(s) not found in datasciencecampus org: "
+                  + ", ".join(str(number) for number in missing)
+              )
+              sys.exit(1)
+
+          urls = [
+              f"https://github.com/orgs/datasciencecampus/projects/{number}"
+              for number in requested_numbers
+          ]
+
+          output_path = os.environ["GITHUB_OUTPUT"]
+          with open(output_path, "a", encoding="utf-8") as fh:
+              fh.write(f"project_urls={json.dumps(urls)}\n")
+
+          print(f"Validated {len(requested_numbers)} project number(s).")
+
+  add-issue-to-projects:
+    needs: prepare-project-urls
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        project_url: ${{ fromJSON(needs['prepare-project-urls'].outputs.project_urls) }}
+    steps:
+      - name: Validate app credentials
+        env:
+          PROJECT_HANDLER_BOT_APP_ID: ${{ vars.PROJECT_HANDLER_BOT_APP_ID }}
+          PROJECT_HANDLER_BOT_PEM: ${{ secrets.PROJECT_HANDLER_BOT_PEM }}
+        run: |
+          if [ -z "$PROJECT_HANDLER_BOT_APP_ID" ]; then
+            echo "Missing variable PROJECT_HANDLER_BOT_APP_ID."
+            echo "Create it as an organization Actions variable and grant access to calling repositories."
+            exit 1
+          fi
+
+          if [ -z "$PROJECT_HANDLER_BOT_PEM" ]; then
+            echo "Missing secret PROJECT_HANDLER_BOT_PEM."
+            echo "Create it as an organization Actions secret and grant access to calling repositories."
+            exit 1
+          fi
+
+      - name: Create GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ vars.PROJECT_HANDLER_BOT_APP_ID }}
+          private-key: ${{ secrets.PROJECT_HANDLER_BOT_PEM }}
+          owner: datasciencecampus
+          repositories: ${{ github.event.repository.name }}
+          permission-organization-projects: write
+
+      - name: Add issue to project
+        uses: actions/add-to-project@5afcf98fcd03f1c2f92c3c83f58ae24323cc57fd # v2.0.0
+        with:
+          project-url: ${{ matrix.project_url }}
+          github-token: ${{ steps.app-token.outputs.token }}

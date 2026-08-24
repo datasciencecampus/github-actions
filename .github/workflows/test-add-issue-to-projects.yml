@@ -1,0 +1,20 @@
+name: Test Add Issue To Projects
+
+'on':
+  workflow_dispatch:
+    inputs:
+      project_numbers:
+        description: Comma or newline separated project numbers for test run.
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  issues: read
+  repository-projects: write
+
+jobs:
+  test-add-to-projects:
+    uses: ./.github/workflows/add-issue-to-projects.yml
+    with:
+      project_numbers: ${{ inputs.project_numbers }}
