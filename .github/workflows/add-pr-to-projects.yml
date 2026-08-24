@@ -57,7 +57,6 @@ jobs:
           owner: ${{ inputs.organization || github.event.repository.owner.login }}
           repositories: ${{ inputs.repository || github.event.repository.name }}
           permission-organization-projects: write
-          permission-pull-requests: read
 
       - name: Add pull request to projects and set field values (Python)
         env:
