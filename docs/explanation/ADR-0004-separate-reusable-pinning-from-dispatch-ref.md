@@ -72,8 +72,9 @@ jobs:
    needed.
 
 3. **Keeps a simple default for SHA-pinned callers**
-   Most callers no longer need to carry a second version field. The dispatch ref
-   lives in the pinned workflow revision itself.
+   Most callers no longer need to carry a second version field. The pinned
+   workflow revision carries the release-managed version that becomes the
+   dispatch tag.
 
 4. **Provides a sensible default for tag-, branch-, and SHA-pinned callers**
    Callers pinned to a tag or branch do not need extra configuration. The public

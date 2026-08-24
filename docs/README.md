@@ -18,7 +18,7 @@ Keep docs short and practical.
 - Reference:
   - `docs/reference/reusable-workflows.md`
 - Explanation:
-  - `docs/explanation/ADR-0001-called-workflow-owns-secret-usage.md`
+  - `docs/explanation/README.md`
 
 ## Rules
 

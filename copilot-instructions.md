@@ -41,8 +41,9 @@ Do not collapse the public and internal workflows back into one file unless the 
 ## Pinning and dispatch gotchas
 
 - `workflow_dispatch` requires a branch or tag ref, not a raw commit SHA.
-- Public reusable workflows support SHA pinning at the `uses:` boundary, but internal dispatch uses the optional `implementation_ref` input when callers need explicit branch/tag control.
-- If `implementation_ref` is omitted, the public reusable workflow derives a dispatchable ref from `github.workflow_ref`.
+- Public reusable workflows support SHA pinning at the `uses:` boundary, but internal dispatch still needs a branch or tag ref.
+- If `implementation_ref` is omitted, the public reusable workflow first uses `github.workflow_ref` when that is already a branch or tag.
+- For SHA-pinned callers, the public reusable workflow reads `configs/implementation-ref.json` from the pinned workflow revision, takes `implementation_version`, and dispatches the matching `v...` tag.
 - For pull request contexts, do not dispatch on `refs/pull/*/merge`; use the PR head branch.
 
 ## Secrets and credentials
@@ -62,15 +63,15 @@ Do not collapse the public and internal workflows back into one file unless the 
 ## Release Please conventions
 
 - Release automation is managed by `.github/workflows/release-please.yml` and `release-please-config.json`.
-- The how-to guides contain `implementation_ref` example lines annotated with `x-release-please-version` so release-please can update them automatically.
-- Do not remove or rewrite those annotations casually.
+- `configs/implementation-ref.json` stores the release-managed `implementation_version` used for SHA-pinned dispatch resolution.
+- Release Please updates `configs/implementation-ref.json` via the JSON updater; workflows prepend `v` when dispatching.
 - Internal test workflows use local reusable workflow paths and should not be version-pinned or wired into release-please version bumping.
 
 ## Documentation conventions
 
 - Keep docs concise and task-oriented.
 - Use `docs/how-to/` for usage steps, `docs/reference/` for exact contracts, and `docs/explanation/` for rationale.
-- When examples show consumer workflows, prefer `@<commit-sha>` plus `implementation_ref: v...` in line with the current SHA-pinning design.
+- When examples show consumer workflows, prefer `@<commit-sha>` without `implementation_ref` unless the example is explicitly showing an override.
 
 ## Change discipline
 
