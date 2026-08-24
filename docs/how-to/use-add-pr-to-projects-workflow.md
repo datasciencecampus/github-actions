@@ -6,14 +6,12 @@ Workflow: `.github/workflows/add-pr-to-projects.yml`
 
 ## Prerequisites
 
-The following organisation-level Actions variables and secrets must be available to your repository after it has been approved for project-routing access:
+The following organisation-level Actions variables and secrets must be available to your repository:
 
 - `PROJECT_ROUTER_BOT_APP_ID`: variable containing the client ID of the app that triggers the workflow.
 - `PROJECT_ROUTER_BOT_PEM`: secret containing the private key of the app that triggers the workflow.
 
 The project-handling credentials are stored in this repository and require no action from callers.
-
-Your repository must also be added to the central allowlist in this repository, and each project number you intend to target must be approved for that repository. Use the access request form in [.github/ISSUE_TEMPLATE/request-github-token-access.yml](../../.github/ISSUE_TEMPLATE/request-github-token-access.yml) when onboarding a new repository or project.
 
 ## Add to your repository
 
@@ -104,8 +102,7 @@ Your project number appears in the URL of the project board:
 
 Before the pull request is added to a project, the central workflow will:
 
-1. Refuse requests from repositories that are not on the central allowlist.
-2. Refuse project numbers that are not approved for the calling repository.
-3. Verify that the submitted pull request node ID resolves to the approved repository.
+1. Verify that the submitted pull request node ID resolves to the named repository.
+2. Refuse requests that claim an organization other than `datasciencecampus`.
 
 These checks are enforced in the called workflow, so changing the caller YAML does not bypass them.
