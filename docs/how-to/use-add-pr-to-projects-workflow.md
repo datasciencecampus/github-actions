@@ -38,7 +38,7 @@ jobs:
     with:
       repository: ${{ github.event.repository.name }}
       pull_request_node_id: ${{ github.event.pull_request.node_id }}
-      project_field_values: '[{"project":194,"field":"Status","value":"Review"}]'
+      project_field_values: '[{"project":1234,"field":"Status","value":"Review"}]'
 ```
 
 If your organisation requires SHA pinning, pin the reusable workflow with `@<commit-sha>` and omit `implementation_ref` unless you need to override the release-managed version recorded in the pinned workflow revision.
@@ -51,25 +51,25 @@ If your organisation requires SHA pinning, pin the reusable workflow with `@<com
 - `field`: required. Field name in the project.
 - `value`: required. Value to set for that field.
 
-Example — set Status to Review on project 194:
+Example — set Status to Review on a project:
 
 ```json
-[{ "project": 194, "field": "Status", "value": "Review" }]
+[{ "project": 1234, "field": "Status", "value": "Review" }]
 ```
 
 Example — set fields on two projects:
 
 ```json
 [
-  { "project": 194, "field": "Status", "value": "Review" },
-  { "project": 205, "field": "Priority", "value": "High" }
+  { "project": 1234, "field": "Status", "value": "Review" },
+  { "project": 5678, "field": "Priority", "value": "High" }
 ]
 ```
 
 ## Finding your project number
 
 Your project number appears in the URL of the project board:
-`https://github.com/orgs/datasciencecampus/projects/194` → project number is `194`.
+`https://github.com/orgs/datasciencecampus/projects/1234` → project number is `1234`.
 
 ## Security checks performed by the called workflow
 

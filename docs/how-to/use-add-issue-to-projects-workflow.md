@@ -37,7 +37,7 @@ jobs:
     with:
       repository: ${{ github.event.repository.name }}
       issue_node_id: ${{ github.event.issue.node_id }}
-      project_field_values: '[{"project":194}]'
+      project_field_values: '[{"project":1234}]'
 ```
 
 If your organisation requires SHA pinning, pin the reusable workflow with `@<commit-sha>` and omit `implementation_ref` unless you need to override the release-managed version recorded in the pinned workflow revision.
@@ -53,25 +53,25 @@ If your organisation requires SHA pinning, pin the reusable workflow with `@<com
 Example — add to project with no field update:
 
 ```json
-[{ "project": 194 }]
+[{ "project": 1234 }]
 ```
 
 Example — add to project and set Status:
 
 ```json
-[{ "project": 194, "field": "Status", "value": "Backlog" }]
+[{ "project": 1234, "field": "Status", "value": "Backlog" }]
 ```
 
 Example — two projects, one with a field update:
 
 ```json
-[{ "project": 194 }, { "project": 205, "field": "Priority", "value": "Medium" }]
+[{ "project": 1234 }, { "project": 5678, "field": "Priority", "value": "Medium" }]
 ```
 
 ## Finding your project number
 
 Your project number appears in the URL of the project board:
-`https://github.com/orgs/datasciencecampus/projects/194` → project number is `194`.
+`https://github.com/orgs/datasciencecampus/projects/1234` → project number is `1234`.
 
 ## Security checks performed by the called workflow
 

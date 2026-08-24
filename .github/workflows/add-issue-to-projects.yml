@@ -18,7 +18,7 @@ name: Add Issue To Projects
       project_field_values:
         description: >-
           JSON list of project mappings, for example
-          [{"project":194}] or [{"project":194,"field":"Status","value":"Review"}]
+          [{"project":1234}] or [{"project":1234,"field":"Status","value":"Review"}]
         required: true
         type: string
       organization:

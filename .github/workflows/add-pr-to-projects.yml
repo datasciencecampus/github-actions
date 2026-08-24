@@ -18,7 +18,7 @@ name: Add Pull Request To Projects
       project_field_values:
         description: >-
           JSON list of mappings, for example
-          [{"project":194,"field":"Status","value":"Review"}]
+          [{"project":1234,"field":"Status","value":"Review"}]
         required: true
         type: string
       organization:

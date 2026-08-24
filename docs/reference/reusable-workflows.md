@@ -60,8 +60,8 @@ Workflow file: `.github/workflows/add-issue-to-projects-impl.yml`
 Each entry must have `project`. `field` and `value` are optional — if omitted the issue is added with no field update.
 
 ```json
-[{"project": 194}]
-[{"project": 194, "field": "Status", "value": "Backlog"}]
+[{"project": 1234}]
+[{"project": 1234, "field": "Status", "value": "Backlog"}]
 ```
 
 ### Issue Behavior
@@ -126,7 +126,7 @@ Workflow file: `.github/workflows/add-pr-to-projects-impl.yml`
 Each entry must have `project`, `field`, and `value`.
 
 ```json
-[{ "project": 194, "field": "Status", "value": "Review" }]
+[{ "project": 1234, "field": "Status", "value": "Review" }]
 ```
 
 ### Pull Request Behavior
