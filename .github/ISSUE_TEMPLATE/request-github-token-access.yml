@@ -9,7 +9,7 @@ body:
       value: |
         Use this form to request access to the central project-routing workflows.
 
-        Approval should only be granted to repositories that need to route issues or pull requests into datasciencecampus Projects.
+        Both project-routing workflows are enabled by default for approved repositories.
   - type: input
     id: repository
     attributes:
@@ -22,26 +22,9 @@ body:
     id: projects
     attributes:
       label: Approved project numbers
-      description: List every ProjectsV2 number this repository needs to target and why.
+      description: List project numbers only, one per line.
       placeholder: |
-        194 - triage board
-        205 - delivery board
-    validations:
-      required: true
-  - type: textarea
-    id: workflows
-    attributes:
-      label: Required workflows
-      description: Note whether you need issue routing, pull request routing, or both.
-      placeholder: |
-        - add-issue-to-projects
-        - add-pr-to-projects
-    validations:
-      required: true
-  - type: textarea
-    id: justification
-    attributes:
-      label: Business justification
-      description: Explain why this repository needs central project-routing access.
+        194
+        205
     validations:
       required: true
