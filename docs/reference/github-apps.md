@@ -2,7 +2,7 @@
 
 This repository uses two GitHub Apps with distinct responsibilities and permission scopes.
 
-## PROJECT_ROUTER_BOT
+## Dispatch credentials
 
 **Purpose:** Allows approved caller repositories to trigger workflows in this repository.
 
@@ -25,7 +25,7 @@ for why `workflow_dispatch` was chosen over `repository_dispatch`.
 
 ---
 
-## PROJECT_HANDLER_BOT
+## Project automation credentials
 
 **Purpose:** Manages ProjectsV2 boards on behalf of the org — adds items and sets field values.
 
@@ -49,4 +49,4 @@ for why `workflow_dispatch` was chosen over `repository_dispatch`.
 
 **Used in:** `add-pr-to-projects-impl.yml` and `add-issue-to-projects-impl.yml` (internal to this repo — callers do not need these credentials).
 
-The workflows only mint a project-handler token for repositories within the `datasciencecampus` organisation, and they verify that the submitted issue or pull request node ID resolves back to the repository named in the request.
+The workflows only mint a project automation token for repositories within the `datasciencecampus` organisation, and they verify that the submitted issue or pull request node ID resolves back to the repository named in the request.

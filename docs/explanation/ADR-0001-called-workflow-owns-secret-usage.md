@@ -7,7 +7,7 @@
 
 This repository provides reusable GitHub Actions workflows for the datasciencecampus organization.
 
-Some workflows require org-scoped credentials, including:
+Some workflows require org-scoped dispatch credentials, including:
 
 - PROJECT_ROUTER_BOT_APP_ID (organization variable)
 - PROJECT_ROUTER_BOT_PRIVATE_KEY (organization secret)

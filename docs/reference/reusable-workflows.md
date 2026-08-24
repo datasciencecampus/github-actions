@@ -4,7 +4,7 @@ This page lists the workflows in this repository and their caller-facing contrac
 
 ## Shared credential model
 
-Authorized callers use the router bot credentials to dispatch workflows:
+Authorized callers use the dispatch credentials to trigger workflows:
 
 - `PROJECT_ROUTER_BOT_APP_ID` (Actions variable, org-level)
 - `PROJECT_ROUTER_BOT_PRIVATE_KEY` (Actions secret, org-level)
@@ -29,8 +29,8 @@ Workflow file: `.github/workflows/add-issue-to-projects.yml`
 
 ### Issue Call Behavior
 
-1. Validates router-bot credentials and required dispatch inputs.
-2. Mints a router-bot token with `actions: write` on `datasciencecampus/github-actions`.
+1. Validates the dispatch credentials and required dispatch inputs.
+2. Mints a dispatch token with `actions: write` on `datasciencecampus/github-actions`.
 3. Dispatches `.github/workflows/add-issue-to-projects-impl.yml` with the supplied inputs.
 
 ### Issue Call Notes
@@ -38,7 +38,7 @@ Workflow file: `.github/workflows/add-issue-to-projects.yml`
 - This is the public reusable workflow for the issue flow.
 - It defaults to dispatching the same branch or tag ref the reusable workflow itself was invoked from, which keeps release-tag callers pinned to matching implementation code.
 - When callers pin by commit SHA, the workflow reads `configs/implementation-ref.json` from its pinned revision, turns `implementation_version` into a `v...` tag, and dispatches that ref. Use `implementation_ref` only to override that metadata.
-- It is most useful for workflows in this repository, or same-organization callers that intentionally expose the router-bot secret to the called workflow.
+- It is most useful for workflows in this repository, or same-organization callers that intentionally expose the dispatch secret to the called workflow.
 
 ## add-issue-to-projects-impl
 
@@ -96,8 +96,8 @@ Workflow file: `.github/workflows/add-pr-to-projects.yml`
 
 ### Pull Request Call Behavior
 
-1. Validates router-bot credentials and required dispatch inputs.
-2. Mints a router-bot token with `actions: write` on `datasciencecampus/github-actions`.
+1. Validates the dispatch credentials and required dispatch inputs.
+2. Mints a dispatch token with `actions: write` on `datasciencecampus/github-actions`.
 3. Dispatches `.github/workflows/add-pr-to-projects-impl.yml` with the supplied inputs.
 
 ### Pull Request Call Notes

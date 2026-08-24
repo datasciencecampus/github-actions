@@ -14,7 +14,7 @@ triggering:
 - `workflow_dispatch` — triggers a specific named workflow via the Actions API,
   requires a token with `actions: write` on the target repository.
 
-The `PROJECT_ROUTER_BOT` GitHub App was provisioned with `actions: write` scoped to
+The dispatch GitHub App was provisioned with `actions: write` scoped to
 `datasciencecampus/github-actions` so that other repositories could trigger workflows
 here.
 
@@ -27,7 +27,7 @@ as the cross-repository trigger mechanism.
 
 1. **Permission alignment**
    `workflow_dispatch` requires `actions: write`, which is the exact permission granted
-   to `PROJECT_ROUTER_BOT`. Using `repository_dispatch` instead would require
+   to the dispatch app. Using `repository_dispatch` instead would require
    `contents: write`, a broader permission that grants write access to repository
    content and is inconsistent with the app's intended scope.
 
@@ -40,14 +40,14 @@ as the cross-repository trigger mechanism.
    validated contract rather than an opaque `client_payload` object.
 
 4. **Least privilege**
-   `actions: write` is narrower than `contents: write`. Keeping the router bot's
+   `actions: write` is narrower than `contents: write`. Keeping the dispatch app's
    permissions minimal limits the blast radius of a compromised token.
 
 ## Consequences
 
 Positive:
 
-- Router bot token scope is as narrow as possible for the dispatch operation.
+- Dispatch token scope is as narrow as possible for the dispatch operation.
 - Called workflow inputs are explicitly declared and validated by GitHub.
 - Callers target a specific workflow file, preventing accidental cross-workflow event routing.
 
@@ -62,7 +62,7 @@ Negative:
 
 1. `repository_dispatch`
    Rejected because it requires `contents: write`, which is broader than necessary and
-   conflicts with the `actions: write` scope already provisioned on `PROJECT_ROUTER_BOT`.
+   conflicts with the `actions: write` scope already provisioned on the dispatch app.
 
 2. Reusable workflows (`workflow_call`)
    Not applicable here because callers are in separate repositories and the credential

@@ -8,10 +8,10 @@ Internal implementation: `.github/workflows/add-pr-to-projects-impl.yml`
 
 ## Prerequisites
 
-The calling repository must be provisioned with the required router-bot Actions variable and secret:
+The calling repository must be provisioned with the required dispatch Actions variable and secret:
 
-- `PROJECT_ROUTER_BOT_APP_ID`: variable containing the client ID of the app that triggers the workflow.
-- `PROJECT_ROUTER_BOT_PRIVATE_KEY`: secret containing the private key of the app that triggers the workflow.
+- `PROJECT_ROUTER_BOT_APP_ID`: variable containing the client ID used to trigger the workflow.
+- `PROJECT_ROUTER_BOT_PRIVATE_KEY`: secret containing the private key used to trigger the workflow.
 
 The project-handling credentials are stored in this repository and require no action from callers.
 
