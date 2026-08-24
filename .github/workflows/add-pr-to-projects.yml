@@ -94,7 +94,7 @@ jobs:
               # Fallback for YAML-like blocks:
               # - project: 123
               #   field: Status
-              #   value: In review
+              #   value: Review
               entries = []
               current = {}
               for original_line in raw.splitlines():

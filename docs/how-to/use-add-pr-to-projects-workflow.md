@@ -1,6 +1,6 @@
 # Use add-pr-to-projects via repository_dispatch
 
-Use this workflow when a pull request is opened and you want to add it to one or more `datasciencecampus` Projects, then set a field value (for example `Status = In review`).
+Use this workflow when a pull request is opened and you want to add it to one or more `datasciencecampus` Projects, then set a field value (for example `Status = Review`).
 
 Workflow:
 
@@ -29,7 +29,7 @@ gh api \
   -f client_payload='{
     "repository":"my-caller-repo",
     "pull_request_node_id":"PR_kwDOExample",
-    "project_field_values":"[{\"project\":194,\"field\":\"Status\",\"value\":\"In review\"}]"
+    "project_field_values":"[{\"project\":194,\"field\":\"Status\",\"value\":\"Review\"}]"
   }'
 ```
 
@@ -64,7 +64,7 @@ jobs:
             "client_payload": {
               "repository": "${{ github.event.repository.name }}",
               "pull_request_node_id": "${{ github.event.pull_request.node_id }}",
-              "project_field_values": "[{\"project\":194,\"field\":\"Status\",\"value\":\"In review\"}]"
+              "project_field_values": "[{\"project\":194,\"field\":\"Status\",\"value\":\"Review\"}]"
             }
           }
           JSON
@@ -82,7 +82,7 @@ Each entry should include:
 
 Example entry:
 
-- `{"project": 194, "field": "Status", "value": "In review"}`
+- `{"project": 194, "field": "Status", "value": "Review"}`
 
 Dispatch payload fields:
 

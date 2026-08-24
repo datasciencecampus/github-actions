@@ -24,7 +24,7 @@ Adds opened issues to one or more `datasciencecampus` Projects by project number
 
 ### add-pr-to-projects
 
-Adds opened pull requests to `datasciencecampus` Projects and sets configured field values (for example `Status = In review`).
+Adds opened pull requests to `datasciencecampus` Projects and sets configured field values (for example `Status = Review`).
 
 - Workflow: [.github/workflows/add-pr-to-projects.yml](.github/workflows/add-pr-to-projects.yml)
 - How-to: [docs/how-to/use-add-pr-to-projects-workflow.md](docs/how-to/use-add-pr-to-projects-workflow.md)
