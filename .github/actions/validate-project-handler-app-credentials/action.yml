@@ -1,0 +1,31 @@
+name: Validate Project Handler App Credentials
+description: Validates that required app credentials are present.
+
+inputs:
+  app-id:
+    description: Project handler GitHub App ID.
+    required: true
+  app-pem:
+    description: Project handler GitHub App private key PEM.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Validate required credentials
+      shell: bash
+      env:
+        PROJECT_HANDLER_BOT_APP_ID: ${{ inputs.app-id }}
+        PROJECT_HANDLER_BOT_PEM: ${{ inputs.app-pem }}
+      run: |
+        if [ -z "$PROJECT_HANDLER_BOT_APP_ID" ]; then
+          echo "Missing variable PROJECT_HANDLER_BOT_APP_ID."
+          echo "Create it as an organization Actions variable and grant access to calling repositories."
+          exit 1
+        fi
+
+        if [ -z "$PROJECT_HANDLER_BOT_PEM" ]; then
+          echo "Missing secret PROJECT_HANDLER_BOT_PEM."
+          echo "Create it as an organization Actions secret and grant access to calling repositories."
+          exit 1
+        fi

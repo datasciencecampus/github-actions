@@ -69,3 +69,43 @@ Notes:
 - The workflow validates that each project number exists in the `datasciencecampus` org before attempting to add the issue.
 - Calling workflows do not pass through secrets.
 - The reusable workflow reads `PROJECT_HANDLER_BOT_APP_ID` directly from repository/organization variables.
+
+## Reusable workflow: add pull request to projects and set field values
+
+Workflow location:
+
+- `.github/workflows/add-pr-to-projects.yml`
+
+What it does:
+
+- Runs from a caller workflow (for example on `pull_request` `opened`).
+- Adds the opened pull request to one or more `datasciencecampus` Projects.
+- Sets a field value for each configured project (for example `Status = In review`).
+
+Caller workflow example:
+
+```yaml
+name: Add opened PR to projects
+
+on:
+  pull_request:
+    types: [opened]
+
+jobs:
+  add-pr-to-projects:
+    uses: datasciencecampus/github-actions/.github/workflows/add-pr-to-projects.yml@main
+    with:
+      project_field_values: |
+        - project: 123
+          field: Status
+          value: In review
+        - project: 194
+          field: Status
+          value: In review
+```
+
+Input format:
+
+- `project_field_values` expects a list of mappings with keys: `project`, `field`, `value`.
+- `project` should be the numeric project number in the `datasciencecampus` org.
+- `pull_request_node_id` is optional and normally inferred from the pull request event payload.
