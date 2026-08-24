@@ -27,10 +27,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Validate app credentials
-        uses: ./.github/actions/validate-project-handler-app-credentials
-        with:
-          app-id: ${{ vars.PROJECT_HANDLER_BOT_APP_ID }}
-          app-pem: ${{ secrets.PROJECT_HANDLER_BOT_PEM }}
+        env:
+          PROJECT_HANDLER_BOT_APP_ID: ${{ vars.PROJECT_HANDLER_BOT_APP_ID }}
+          PROJECT_HANDLER_BOT_PEM: ${{ secrets.PROJECT_HANDLER_BOT_PEM }}
+        run: |
+          if [ -z "$PROJECT_HANDLER_BOT_APP_ID" ]; then
+            echo "Missing variable PROJECT_HANDLER_BOT_APP_ID."
+            echo "Create it as an organization Actions variable and grant access to calling repositories."
+            exit 1
+          fi
+
+          if [ -z "$PROJECT_HANDLER_BOT_PEM" ]; then
+            echo "Missing secret PROJECT_HANDLER_BOT_PEM."
+            echo "Create it as an organization Actions secret and grant access to calling repositories."
+            exit 1
+          fi
 
       - name: Create GitHub App token
         id: app-token
