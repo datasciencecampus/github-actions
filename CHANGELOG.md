@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.0](https://github.com/datasciencecampus/github-actions/compare/v1.2.2...v1.3.0) (2026-08-25)
+
+
+### Features
+
+* add pull request template for improved contribution guidelines ([ec0e6e1](https://github.com/datasciencecampus/github-actions/commit/ec0e6e13bf5c0f7b0650b17244eae85bd7309620))
+
 ## [1.2.2](https://github.com/datasciencecampus/github-actions/compare/v1.2.1...v1.2.2) (2026-08-24)
 
 
