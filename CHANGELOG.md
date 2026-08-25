@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.5.0](https://github.com/datasciencecampus/github-actions/compare/v1.4.0...v1.5.0) (2026-08-25)
+
+
+### Features
+
+* enhance issue and pull request reusable workflows with automatic field value derivation and improved documentation ([1eee193](https://github.com/datasciencecampus/github-actions/commit/1eee19379097778e78cd81d624d2a6f17f117fd4))
+* enhance workflow configurations with concurrency settings and improved job names ([2d7d036](https://github.com/datasciencecampus/github-actions/commit/2d7d036f044f94a683313ac2d28257d310582330))
+
 ## [1.4.0](https://github.com/datasciencecampus/github-actions/compare/v1.3.0...v1.4.0) (2026-08-25)
 
 
