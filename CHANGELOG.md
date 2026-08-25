@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.0](https://github.com/datasciencecampus/github-actions/compare/v1.3.0...v1.4.0) (2026-08-25)
+
+
+### Features
+
+* add Code of Conduct, Security Notice, and contributing guidelines ([bd714e8](https://github.com/datasciencecampus/github-actions/commit/bd714e8eb84a713b7b1fe2708c572705e7033bf5))
+
 ## [1.3.0](https://github.com/datasciencecampus/github-actions/compare/v1.2.2...v1.3.0) (2026-08-25)
 
 
