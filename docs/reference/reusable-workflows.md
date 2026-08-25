@@ -43,6 +43,12 @@ Workflow file: `.github/workflows/add-issue-to-projects.yml`
 - Use `implementation_ref` only to override that release-managed dispatch target with a specific branch or tag.
 - It is most useful for workflows in this repository, or same-organization callers that intentionally provide the dispatch secret to the public reusable workflow.
 
+### Issue Self-Test Workflow
+
+- `.github/workflows/test-add-issue-to-projects-reusable.yml` manually exercises this reusable workflow with `workflow_dispatch` inputs.
+- The same test workflow also runs automatically on `issues.opened` in this repository.
+- For automatic runs, it derives `project_field_values` from the repository Actions variable `PROJECT_NUMBER`.
+
 ## add-issue-to-projects-impl
 
 Workflow file: `.github/workflows/add-issue-to-projects-impl.yml`
@@ -108,6 +114,12 @@ Workflow file: `.github/workflows/add-pr-to-projects.yml`
 - This is the public reusable workflow for the pull request flow.
 - If `implementation_ref` is omitted, the workflow reads `configs/implementation-ref.json` from the invoked workflow revision, turns `implementation_version` into a `v...` tag, and dispatches that release-managed ref.
 - Use `implementation_ref` only to override that release-managed dispatch target with a specific branch or tag.
+
+### Pull Request Self-Test Workflow
+
+- `.github/workflows/test-add-pr-to-projects-reusable.yml` manually exercises this reusable workflow with `workflow_dispatch` inputs.
+- The same test workflow also runs automatically on `pull_request.opened` and `pull_request.reopened` in this repository.
+- For automatic runs, it derives `project_field_values` from the repository Actions variable `PROJECT_NUMBER`, using `Status = Review` as the default field mapping.
 
 ## add-pr-to-projects-impl
 

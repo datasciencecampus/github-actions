@@ -22,7 +22,7 @@ Adds opened issues to one or more `datasciencecampus` Projects by project number
 - Public reusable workflow: [.github/workflows/add-issue-to-projects.yml](.github/workflows/add-issue-to-projects.yml)
 - Internal implementation: [.github/workflows/add-issue-to-projects-impl.yml](.github/workflows/add-issue-to-projects-impl.yml)
 - How-to guide: [docs/how-to/use-add-issue-to-projects-workflow.md](docs/how-to/use-add-issue-to-projects-workflow.md)
-- Reusable workflow test: [.github/workflows/test-add-issue-to-projects-reusable.yml](.github/workflows/test-add-issue-to-projects-reusable.yml)
+- Reusable workflow test: [.github/workflows/test-add-issue-to-projects-reusable.yml](.github/workflows/test-add-issue-to-projects-reusable.yml) (manual or `issues.opened`; requires repository variable `PROJECT_NUMBER` unless manual inputs are supplied)
 
 ### `add-pr-to-projects`
 
@@ -31,7 +31,7 @@ Adds opened pull requests to `datasciencecampus` Projects and sets configured fi
 - Public reusable workflow: [.github/workflows/add-pr-to-projects.yml](.github/workflows/add-pr-to-projects.yml)
 - Internal implementation: [.github/workflows/add-pr-to-projects-impl.yml](.github/workflows/add-pr-to-projects-impl.yml)
 - How-to guide: [docs/how-to/use-add-pr-to-projects-workflow.md](docs/how-to/use-add-pr-to-projects-workflow.md)
-- Reusable workflow test: [.github/workflows/test-add-pr-to-projects-reusable.yml](.github/workflows/test-add-pr-to-projects-reusable.yml)
+- Reusable workflow test: [.github/workflows/test-add-pr-to-projects-reusable.yml](.github/workflows/test-add-pr-to-projects-reusable.yml) (manual or `pull_request.opened`/`pull_request.reopened`; requires repository variable `PROJECT_NUMBER` unless manual inputs are supplied)
 
 ## Consumption Model
 

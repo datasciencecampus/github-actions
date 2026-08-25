@@ -1,6 +1,9 @@
 name: Test Add Issue To Projects Reusable Workflow
 
 'on':
+  issues:
+    types:
+      - opened
   workflow_dispatch:
     inputs:
       project_field_values:
@@ -24,5 +27,5 @@ jobs:
       PROJECT_ROUTER_BOT_PRIVATE_KEY: ${{ secrets.PROJECT_ROUTER_BOT_PRIVATE_KEY }}
     with:
       repository: ${{ github.event.repository.name }}
-      issue_node_id: ${{ inputs.issue_node_id }}
-      project_field_values: ${{ inputs.project_field_values }}
+      issue_node_id: ${{ inputs.issue_node_id || github.event.issue.node_id }}
+      project_field_values: ${{ inputs.project_field_values || format('[{{"project":{0}}}]', vars.PROJECT_NUMBER) }}
