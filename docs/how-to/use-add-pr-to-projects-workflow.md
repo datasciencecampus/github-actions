@@ -13,6 +13,9 @@ The calling repository must be provisioned with the required dispatch Actions va
 - `PROJECT_ROUTER_BOT_APP_ID`: variable containing the client ID used to trigger the workflow.
 - `PROJECT_ROUTER_BOT_PRIVATE_KEY`: secret containing the private key used to trigger the workflow.
 
+> [!IMPORTANT]
+> If the calling repository is public and triggers this workflow automatically from `pull_request` events, it must restrict pull request creation to collaborators only, or apply an equivalent control that ensures those events come only from trusted actors. Configure this in the caller repository at `https://github.com/<owner>/<repo>/settings` under `Settings > General > Features > Pull requests > Pull request permissions`.
+
 The project-handling credentials are stored in this repository and require no action from callers.
 
 ## Add to your repository

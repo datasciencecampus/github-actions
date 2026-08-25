@@ -9,6 +9,9 @@ Authorized callers use the dispatch credentials to trigger workflows:
 - `PROJECT_ROUTER_BOT_APP_ID` (Actions variable, org-level)
 - `PROJECT_ROUTER_BOT_PRIVATE_KEY` (Actions secret, org-level)
 
+> [!IMPORTANT]
+> For public caller repositories that run these workflows automatically on issue or pull request creation events, those events must be limited to trusted actors. In practice, require collaborator-only issue or pull request creation, or an equivalent repository control. Configure this in the caller repository at `https://github.com/<owner>/<repo>/settings` under `Settings > General > Features`, then use `Issues > Issue permissions` or `Pull requests > Pull request permissions` as appropriate.
+
 Project-handling credentials are used internally and are not required from callers. The called workflows verify that the requested organization matches this repository owner and that the submitted issue or pull request node ID resolves back to the repository named in the request. See [GitHub Apps reference](github-apps.md).
 
 ## add-issue-to-projects

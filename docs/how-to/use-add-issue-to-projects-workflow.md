@@ -12,6 +12,9 @@ Internal implementation: `.github/workflows/add-issue-to-projects-impl.yml`
 
 Same organisation-level credentials as `add-pr-to-projects` — see [Prerequisites](use-add-pr-to-projects-workflow.md#prerequisites).
 
+> [!IMPORTANT]
+> If the calling repository is public and triggers this workflow automatically from `issues` events, it must restrict issue creation to collaborators only, or apply an equivalent control that ensures those events come only from trusted actors. Configure this in the caller repository at `https://github.com/<owner>/<repo>/settings` under `Settings > General > Features > Issues > Issue permissions`.
+
 The project-handling credentials are stored in this repository and require no action from callers.
 
 ## Add to your repository

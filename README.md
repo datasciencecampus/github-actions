@@ -40,6 +40,9 @@ Consumers should call the public reusable workflows from other repositories usin
 - By default, the reusable workflows dispatch the release tag recorded in metadata stored alongside the invoked workflow revision.
 - Set `implementation_ref` only when you need to override that release-managed dispatch target with a specific branch or tag.
 
+> [!IMPORTANT]
+> Public repositories that trigger these workflows automatically from issue or pull request creation events must restrict those events to trusted actors, for example by allowing only collaborators to open issues or pull requests. Configure this in the caller repository at `https://github.com/<owner>/<repo>/settings` under `Settings > General > Features`, then use `Issues > Issue permissions` or `Pull requests > Pull request permissions` as appropriate.
+
 The full caller-facing contract, including required inputs and `implementation_ref` behavior, is documented in [docs/reference/reusable-workflows.md](docs/reference/reusable-workflows.md).
 
 ## Documentation
