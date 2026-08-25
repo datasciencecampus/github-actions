@@ -22,11 +22,16 @@ name: Add Issue To Projects Implementation
         required: false
         type: string
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ inputs.repository }}-${{ inputs.issue_node_id }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
 jobs:
   add-issue-to-projects-impl:
+    name: Add issue to projects implementation
     runs-on: ubuntu-latest
     environment: project-automation
     steps:

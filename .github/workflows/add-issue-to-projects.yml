@@ -35,6 +35,7 @@ permissions:
 
 jobs:
   add-issue-to-projects:
+    name: Add issue to projects
     runs-on: ubuntu-latest
     steps:
       - name: Validate dispatch inputs

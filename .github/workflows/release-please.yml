@@ -6,6 +6,10 @@ name: Release Please
       - main
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
@@ -14,9 +18,9 @@ jobs:
     name: Release Please
     runs-on: ubuntu-latest
     permissions:
-      contents: write
-      issues: write
-      pull-requests: write
+      contents: write # Required for release-please to create release commits, tags, and GitHub releases.
+      issues: write # Required for release-please to open and update tracking issues when configured.
+      pull-requests: write # Required for release-please to create and update release pull requests.
     steps:
       - name: Run release-please
         uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
