@@ -50,4 +50,4 @@ The full caller-facing contract, including required inputs and `implementation_r
 - Documentation index: [docs/README.md](docs/README.md)
 - Workflow reference: [docs/reference/reusable-workflows.md](docs/reference/reusable-workflows.md)
 - Architecture and ADRs: [docs/explanation/README.md](docs/explanation/README.md)
-- Contribution guide: [CONTRIBUTING.md](CONTRIBUTING.md)
+- Contribution guide: [.github/CONTRIBUTING.md](.github/CONTRIBUTING.md)

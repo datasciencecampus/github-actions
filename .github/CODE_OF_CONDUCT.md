@@ -10,7 +10,7 @@ Contributors to repositories hosted by the Office for National Statistics (ONS) 
 
 ## Our Pledge
 
-We as members, contributors, and leaders pledge to make participation in our projects and community a safe, inclusive, harassment‑free experience for everyone, regardless of age, body size, visible or invisible disability, ethnicity, sex characteristics, gender identity and expression, level of experience, nationality, personal appearance, race, religion, or sexual orientation.
+We as members, contributors, and leaders pledge to make participation in our projects and community a safe, inclusive, harassment-free experience for everyone, regardless of age, body size, visible or invisible disability, ethnicity, sex characteristics, gender identity and expression, level of experience, nationality, personal appearance, race, religion, or sexual orientation.
 
 We commit to act and interact in ways that contribute to an open, welcoming, diverse, and healthy community.
 
@@ -52,7 +52,7 @@ Maintainers or leadership who do not act in good faith in enforcing this Code ma
 
 ## Enforcement Guidelines
 
-Community leaders will follow these guidelines in determining the consequences for any action they deem in violation of this Code of Conduct:
+Community leaders will follow these guidelines in determining the consequences for any action they deem in violation of the Code of Conduct:
 
 ### 1. Correction
 
