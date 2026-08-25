@@ -65,7 +65,10 @@ Example — add to project and set Status:
 Example — two projects, one with a field update:
 
 ```json
-[{ "project": 1234 }, { "project": 5678, "field": "Priority", "value": "Medium" }]
+[
+  { "project": 1234 },
+  { "project": 5678, "field": "Priority", "value": "Medium" }
+]
 ```
 
 ## Finding your project number

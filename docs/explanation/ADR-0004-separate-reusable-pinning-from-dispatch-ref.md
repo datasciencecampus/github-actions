@@ -40,7 +40,7 @@ In practice:
 - Callers may pin the public reusable workflow by commit SHA in `uses:`.
 - Public reusable workflows accept an optional `implementation_ref` override.
 - If `implementation_ref` is omitted, the public reusable workflow derives the
-   dispatch ref from a release-managed metadata file in the invoked workflow revision.
+  dispatch ref from a release-managed metadata file in the invoked workflow revision.
 - It turns the stored release version into the matching `v...` dispatch tag.
 
 Example caller:
@@ -91,7 +91,7 @@ Negative:
 
 - The dispatch ref metadata must be kept correct as part of the release process.
 - Two versioning concepts can still exist in caller configuration when a caller
-   chooses to override the dispatch target explicitly.
+  chooses to override the dispatch target explicitly.
 - Misconfigured `implementation_ref` values still fail at dispatch time if the
   named branch or tag does not exist.
 
