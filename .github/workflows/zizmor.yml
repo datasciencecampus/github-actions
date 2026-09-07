@@ -1,5 +1,4 @@
 name: GitHub Actions Security Analysis with zizmor 🌈
-run-name: ${{ github.workflow }} - ${{ github.actor }} pushed a change to ${{ github.ref_name }}
 
 "on":
   workflow_call:
@@ -12,7 +11,7 @@ run-name: ${{ github.workflow }} - ${{ github.actor }} pushed a change to ${{ gi
         description: Upload SARIF results to GitHub Advanced Security.
         required: false
         type: boolean
-        default: false
+        default: true
       persona:
         description: Persona for zizmor analysis (regular, pedantic, auditor).
         required: false
