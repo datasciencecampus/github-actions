@@ -66,4 +66,4 @@ jobs:
         with:
           config: ${{ inputs.config-path || github.event.inputs.config-path }}
           advanced-security: ${{ inputs.advanced-security || github.event.inputs.advanced-security == 'true' || false }}
-          persona: ${{ inputs.persona || github.event.inputs.persona || '' }}
+          persona: ${{ inputs.persona || github.event.inputs.persona || 'pedantic' }}
