@@ -1,5 +1,5 @@
 name: CI Security
-run-name: ${{ github.workflow }} - ${{ github.actor }} ${{ github.event_name == 'pull_request' && 'opened PR to' || github.event_name == 'workflow_dispatch' && 'manually triggered on' || 'pushed a change to' }} ${{ github.ref_name }}
+run-name: ${{ github.workflow }} - ${{ github.actor }} triggered security checks on ${{ github.ref_name }}
 
 "on":
   workflow_call:
