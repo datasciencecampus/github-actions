@@ -1,4 +1,4 @@
-name: Security
+name: Checkov Infrastructure Security Scan
 
 "on":
   workflow_call:
@@ -7,6 +7,11 @@ name: Security
         description: Path to the Checkov config file.
         required: false
         type: string
+      advanced-security:
+        description: Upload SARIF results to GitHub Advanced Security.
+        required: false
+        type: boolean
+        default: true
   push:
   pull_request:
     branches: ["main"]
@@ -37,6 +42,6 @@ jobs:
           output_file_path: console,results.sarif
       - name: Upload SARIF file
         uses: github/codeql-action/upload-sarif@cdf488f595d80d6e07e03d4674febd5ab45fa938 # v4.37.9
-        if: success() || failure()
+        if: (success() || failure()) && inputs.advanced-security
         with:
           sarif_file: results.sarif
