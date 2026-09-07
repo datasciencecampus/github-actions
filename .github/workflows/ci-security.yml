@@ -1,0 +1,51 @@
+name: CI Security
+
+"on":
+  workflow_call:
+    inputs:
+      checkov-config-path:
+        description: Path to the Checkov config file.
+        required: false
+        type: string
+      checkov-advanced-security:
+        description: Upload Checkov SARIF results to GitHub Advanced Security.
+        required: false
+        type: boolean
+        default: true
+      zizmor-config-path:
+        description: Path to the zizmor config file.
+        required: false
+        type: string
+      zizmor-persona:
+        description: Persona for zizmor analysis (regular, pedantic, auditor).
+        required: false
+        type: string
+        default: pedantic
+      zizmor-advanced-security:
+        description: Upload zizmor SARIF results to GitHub Advanced Security.
+        required: false
+        type: boolean
+        default: false
+  push:
+  pull_request:
+    branches: ["main"]
+
+permissions: {} # Deny token access by default; jobs grant only what they need.
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checkov:
+    uses: ./.github/workflows/checkov.yml
+    with:
+      config-path: ${{ inputs.checkov-config-path }}
+      advanced-security: ${{ inputs.checkov-advanced-security }}
+
+  zizmor:
+    uses: ./.github/workflows/zizmor.yml
+    with:
+      config-path: ${{ inputs.zizmor-config-path }}
+      persona: ${{ inputs.zizmor-persona }}
+      advanced-security: ${{ inputs.zizmor-advanced-security }}
