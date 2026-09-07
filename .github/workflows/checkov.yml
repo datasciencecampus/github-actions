@@ -14,6 +14,10 @@ name: Checkov Infrastructure Security Scan
         type: boolean
         default: true
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+
 permissions: {} # Deny token access by default; jobs grant only what they need.
 
 jobs:
