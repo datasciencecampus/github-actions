@@ -51,10 +51,6 @@ run-name: "Security Analysis - ${{ github.event_name == 'pull_request' && format
         type: string
         default: pedantic
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: false
-
 permissions:
   actions: read # Required for zizmor SARIF upload metadata lookups.
   contents: read # Required to read repository contents during analysis.
