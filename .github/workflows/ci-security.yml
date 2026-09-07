@@ -40,12 +40,19 @@ concurrency:
 jobs:
   checkov:
     uses: ./.github/workflows/checkov.yml
+    permissions:
+      contents: read # Required to check out and scan repository content.
+      security-events: write # Required to upload SARIF results to GitHub Advanced Security.
     with:
       config-path: ${{ inputs.checkov-config-path }}
       advanced-security: ${{ inputs.checkov-advanced-security }}
 
   zizmor:
     uses: ./.github/workflows/zizmor.yml
+    permissions:
+      actions: read # Required for SARIF upload metadata lookups in private or internal repositories.
+      contents: read # Required to read repository contents during analysis, especially for private or internal repositories.
+      security-events: write # Required to upload SARIF results to GitHub Advanced Security.
     with:
       config-path: ${{ inputs.zizmor-config-path }}
       persona: ${{ inputs.zizmor-persona }}
