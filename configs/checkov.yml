@@ -1,0 +1,5 @@
+framework:
+  - github_actions
+
+quiet: false
+compact: false
