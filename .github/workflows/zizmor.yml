@@ -14,9 +14,10 @@ run-name: ${{ github.workflow }} - ${{ github.actor }} pushed a change to ${{ gi
         type: boolean
         default: false
       persona:
-        description: Persona for zizmor analysis (e.g., pedantic).
+        description: Persona for zizmor analysis (regular, pedantic, auditor).
         required: false
         type: string
+        default: pedantic
 
   pull_request:
   push:
@@ -34,9 +35,10 @@ run-name: ${{ github.workflow }} - ${{ github.actor }} pushed a change to ${{ gi
         type: boolean
         default: false
       persona:
-        description: Persona for zizmor analysis (e.g., pedantic).
+        description: Persona for zizmor analysis (regular, pedantic, auditor).
         required: false
         type: string
+        default: pedantic
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}

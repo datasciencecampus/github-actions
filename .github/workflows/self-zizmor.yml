@@ -1,0 +1,22 @@
+name: Self-test zizmor reusable workflow
+run-name: ${{ github.workflow }} - ${{ github.actor }} triggered self-test on ${{ github.ref_name }}
+
+"on":
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test-zizmor-reusable:
+    uses: ./.github/workflows/zizmor.yml
+    with:
+      advanced-security: false
