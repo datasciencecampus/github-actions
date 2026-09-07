@@ -16,10 +16,6 @@ name: Checkov Infrastructure Security Scan
 
 permissions: {} # Deny token access by default; jobs grant only what they need.
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
-
 jobs:
   checkov:
     name: checkov
