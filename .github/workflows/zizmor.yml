@@ -1,19 +1,23 @@
 name: GitHub Actions Security Analysis with zizmor 🌈
 run-name: ${{ github.workflow }} - ${{ github.actor }} pushed a change to ${{ github.ref_name }}
 
-'on':
+"on":
   workflow_call:
     inputs:
       config-path:
         description: Path to the zizmor config file.
         required: false
         type: string
-        default: ./configs/zizmor.yaml
       advanced-security:
         description: Upload SARIF results to GitHub Advanced Security.
         required: false
         type: boolean
         default: false
+      personality:
+        description: Personality for zizmor analysis (e.g., pedantic).
+        required: false
+        type: string
+
   pull_request:
   push:
     branches:
@@ -24,12 +28,15 @@ run-name: ${{ github.workflow }} - ${{ github.actor }} pushed a change to ${{ gi
         description: Path to the zizmor config file.
         required: false
         type: string
-        default: ./configs/zizmor.yaml
       advanced-security:
         description: Upload SARIF results to GitHub Advanced Security.
         required: false
         type: boolean
         default: false
+      personality:
+        description: Personality for zizmor analysis (e.g., pedantic).
+        required: false
+        type: string
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -55,5 +62,6 @@ jobs:
       - name: Run zizmor
         uses: zizmorcore/zizmor-action@3dc1ecc9bcb9e94e9b2c709687979e1298497054 # v0.6.2
         with:
-          config: ${{ inputs.config-path || github.event.inputs.config-path || './configs/zizmor.yaml' }}
+          config: ${{ inputs.config-path || github.event.inputs.config-path }}
           advanced-security: ${{ inputs.advanced-security || github.event.inputs.advanced-security == 'true' || false }}
+          personality: ${{ inputs.personality || github.event.inputs.personality || '' }}
