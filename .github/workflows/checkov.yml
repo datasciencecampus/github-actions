@@ -7,6 +7,7 @@ name: Checkov Infrastructure Security Scan
         description: Path to the Checkov config file.
         required: false
         type: string
+        default: ./configs/checkov.yml
       advanced-security:
         description: Upload SARIF results to GitHub Advanced Security.
         required: false

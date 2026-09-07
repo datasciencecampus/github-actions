@@ -7,6 +7,7 @@ name: GitHub Actions Security Analysis with zizmor 🌈
         description: Path to the zizmor config file.
         required: false
         type: string
+        default: ./configs/zizmor.yaml
       advanced-security:
         description: Upload SARIF results to GitHub Advanced Security.
         required: false
@@ -24,6 +25,7 @@ name: GitHub Actions Security Analysis with zizmor 🌈
         description: Path to the zizmor config file.
         required: false
         type: string
+        default: ./configs/zizmor.yaml
       advanced-security:
         description: Upload SARIF results to GitHub Advanced Security.
         required: false
