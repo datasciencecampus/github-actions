@@ -55,11 +55,17 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
-permissions: {} # Deny token access by default; jobs grant only what they need.
+permissions:
+  actions: read # Required for zizmor SARIF upload metadata lookups.
+  contents: read # Required to read repository contents during analysis.
 
 jobs:
   zizmor:
     uses: ./.github/workflows/zizmor.yml
+    permissions:
+      actions: read # Required for SARIF upload metadata lookups in private or internal repositories.
+      contents: read # Required to read repository contents during analysis.
+      security-events: write # Required to upload SARIF results to GitHub Advanced Security.
     with:
       config-path: ${{ inputs.zizmor-config || github.event.inputs.zizmor-config }}
       advanced-security: ${{ inputs.advanced-security || github.event.inputs.advanced-security == 'true' || false }}
@@ -67,6 +73,9 @@ jobs:
 
   checkov:
     uses: ./.github/workflows/checkov.yml
+    permissions:
+      contents: read # Required to check out and scan repository content.
+      security-events: write # Required to upload SARIF results to GitHub Advanced Security.
     with:
       config-path: ${{ inputs.checkov-config }}
       advanced-security: ${{ inputs.advanced-security || github.event.inputs.advanced-security == 'true' || false }}
