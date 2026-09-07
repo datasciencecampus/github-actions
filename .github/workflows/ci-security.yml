@@ -33,10 +33,6 @@ run-name: ${{ github.workflow }} - ${{ github.actor }} triggered security checks
 
 permissions: {} # Deny token access by default; jobs grant only what they need.
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
-
 jobs:
   checkov:
     uses: ./.github/workflows/checkov.yml
