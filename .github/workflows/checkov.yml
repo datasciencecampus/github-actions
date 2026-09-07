@@ -12,9 +12,6 @@ name: Checkov Infrastructure Security Scan
         required: false
         type: boolean
         default: true
-  push:
-  pull_request:
-    branches: ["main"]
 
 permissions: {} # Deny token access by default; jobs grant only what they need.
 

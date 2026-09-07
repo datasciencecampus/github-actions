@@ -14,10 +14,7 @@ run-name: ${{ github.workflow }} - ${{ github.actor }} pushed a change to ${{ gi
         required: false
         type: boolean
         default: false
-  pull_request:
-  push:
-    branches:
-      - main
+
   workflow_dispatch:
     inputs:
       config-path:
