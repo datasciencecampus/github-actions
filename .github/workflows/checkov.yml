@@ -1,0 +1,44 @@
+name: Checkov Infrastructure Security Scan
+
+"on":
+  workflow_call:
+    inputs:
+      config-path:
+        description: Path to the Checkov config file.
+        required: false
+        type: string
+      advanced-security:
+        description: Upload SARIF results to GitHub Advanced Security.
+        required: false
+        type: boolean
+        default: true
+
+permissions: {} # Deny token access by default; jobs grant only what they need.
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checkov:
+    name: checkov
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read # Required to check out and scan repository content.
+      security-events: write # Required to upload SARIF results to GitHub Advanced Security.
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Checkov GitHub Action
+        uses: bridgecrewio/checkov-action@5659ddea96102e16d8f221b3d8402453c0b1c150 # v12.3121.0
+        with:
+          config_file: ${{ inputs.config-path }}
+          directory: "."
+          output_format: cli,sarif
+          output_file_path: console,results.sarif
+      - name: Upload SARIF file
+        uses: github/codeql-action/upload-sarif@cdf488f595d80d6e07e03d4674febd5ab45fa938 # v4.37.9
+        if: (success() || failure()) && inputs.advanced-security
+        with:
+          sarif_file: results.sarif
