@@ -53,7 +53,7 @@ run-name: "Security Analysis - ${{ github.event_name == 'pull_request' && format
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 permissions:
   actions: read # Required for zizmor SARIF upload metadata lookups.
