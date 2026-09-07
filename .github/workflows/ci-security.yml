@@ -40,7 +40,7 @@ jobs:
       contents: read # Required to check out and scan repository content.
       security-events: write # Required to upload SARIF results to GitHub Advanced Security.
     with:
-      config-path: ${{ inputs.checkov-config-path }}
+      config-path: ${{ inputs.checkov-config-path || './configs/checkov.yml' }}
       advanced-security: ${{ inputs.checkov-advanced-security }}
 
   zizmor:
@@ -50,6 +50,6 @@ jobs:
       contents: read # Required to read repository contents during analysis, especially for private or internal repositories.
       security-events: write # Required to upload SARIF results to GitHub Advanced Security.
     with:
-      config-path: ${{ inputs.zizmor-config-path }}
+      config-path: ${{ inputs.zizmor-config-path || './configs/zizmor.yaml' }}
       persona: ${{ inputs.zizmor-persona }}
       advanced-security: ${{ inputs.zizmor-advanced-security }}
