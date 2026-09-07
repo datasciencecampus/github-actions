@@ -8,10 +8,6 @@ run-name: ${{ github.workflow }} - ${{ github.actor }} triggered self-test on ${
       - main
   workflow_dispatch:
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
-
 permissions:
   contents: read
   actions: read # Required for zizmor to analyze workflow files.
