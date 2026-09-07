@@ -1,10 +1,6 @@
 name: Checkov Infrastructure Security Scan
 
 "on":
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
   workflow_call:
     inputs:
       config-path:
