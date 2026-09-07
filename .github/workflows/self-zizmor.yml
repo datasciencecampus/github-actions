@@ -20,3 +20,4 @@ jobs:
     uses: ./.github/workflows/zizmor.yml
     with:
       advanced-security: false
+      persona: auditor
