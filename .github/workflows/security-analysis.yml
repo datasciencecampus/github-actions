@@ -1,6 +1,6 @@
 name: Workflow & Infrastructure Security Analysis
 
-run-name: Security Analysis - ${{ github.event_name == 'pull_request' && format('PR #{0}', github.event.pull_request.number) || 'main' }}
+run-name: "Security Analysis - ${{ github.event_name == 'pull_request' && format('PR #{0}', github.event.pull_request.number) || 'main' }}"
 
 "on":
   push:
