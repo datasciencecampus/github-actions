@@ -45,6 +45,8 @@ Consumers should call the public reusable workflows from other repositories usin
 
 The full caller-facing contract, including required inputs and `implementation_ref` behavior, is documented in [docs/reference/reusable-workflows.md](docs/reference/reusable-workflows.md).
 
+For a visual explanation of the caller flow, internal dispatch hop, and trust boundaries, see [docs/explanation/workflow-trust-boundaries.md](docs/explanation/workflow-trust-boundaries.md).
+
 ## Documentation
 
 - Documentation index: [docs/README.md](docs/README.md)
