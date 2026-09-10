@@ -1,0 +1,25 @@
+{
+  "last_updated": "2026-09-10T00:00:00Z",
+  "hooks": {
+    "https://github.com/zizmorcore/zizmor-pre-commit": {
+      "last_updated": "2026-09-10T00:00:00Z",
+      "current_sha": "451b56af716f9f0d0c2b816503a3fd0cf8b036fa",
+      "current_version": "v1.29.0",
+      "semver_levels": {
+        "major": "2026-09-10T00:00:00Z",
+        "minor": "2026-09-10T00:00:00Z",
+        "patch": "2026-09-10T00:00:00Z"
+      }
+    },
+    "https://github.com/compilerla/conventional-pre-commit": {
+      "last_updated": "2026-09-10T00:00:00Z",
+      "current_sha": "3db014c16a9d31997ab8c07a4d61fcce936c8f0d",
+      "current_version": "v4.4.0",
+      "semver_levels": {
+        "major": "2026-09-10T00:00:00Z",
+        "minor": "2026-09-10T00:00:00Z",
+        "patch": "2026-09-10T00:00:00Z"
+      }
+    }
+  }
+}

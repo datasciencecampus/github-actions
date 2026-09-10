@@ -1,0 +1,9 @@
+{
+  "cooldown_days": {
+    "major": 28,
+    "minor": 14,
+    "patch": 7
+  },
+  "hooks_to_skip": [],
+  "enable_auto_updates": true
+}
