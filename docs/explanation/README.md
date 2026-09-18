@@ -2,6 +2,10 @@
 
 Background, rationale, and trade-offs.
 
+## Architecture
+
+- [Workflow trust boundaries](workflow-trust-boundaries.md)
+
 ## ADRs
 
 - [ADR-0001: Called workflow owns secret usage](ADR-0001-called-workflow-owns-secret-usage.md)
