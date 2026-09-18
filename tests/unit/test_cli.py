@@ -71,6 +71,22 @@ def test_detect_command_skips_detection_when_auto_updates_are_disabled(tmp_path,
     assert "Auto updates disabled" in capsys.readouterr().out
 
 
+def test_detect_command_reports_when_no_comparable_updates_are_found(tmp_path, monkeypatch, capsys):
+    config = tmp_path / "pre-commit-config.yaml"
+    tracking = tmp_path / "tracking.json"
+    summary = tmp_path / "summary.md"
+    config.write_text("repos: []\n")
+    tracking.write_text('{"hooks": {}}')
+    monkeypatch.setenv("GITHUB_STEP_SUMMARY", str(summary))
+    monkeypatch.setattr(cli, "detect_updates", lambda config_path, tracking_path, github: [])
+
+    cli.detect_command(type("Args", (), {"config": str(config), "tracking": str(tracking)})())
+
+    assert "No comparable updates detected" in summary.read_text()
+    assert "unsupported host or tag format" in summary.read_text()
+    assert "No comparable pre-commit updates" in capsys.readouterr().out
+
+
 def test_write_summary_appends_markdown(tmp_path, monkeypatch):
     summary = tmp_path / "summary"
     monkeypatch.setenv("GITHUB_STEP_SUMMARY", str(summary))

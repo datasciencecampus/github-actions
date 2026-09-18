@@ -161,11 +161,12 @@ def detect_command(args: argparse.Namespace) -> None:
         raise SystemExit(1) from error
     _write_output({"updates_found": "true" if updates else "false", "updates_json": updates})
     if not updates:
-        _write_notice("No pre-commit updates", "All configured hooks are already current.")
+        _write_notice("No comparable pre-commit updates", "No comparable updates were detected.")
         _write_summary(
             "## Pre-commit update check\n\n"
-            "> **No updates available**\n\n"
-            "All configured pre-commit hooks are already at their latest detected release."
+            "> **No comparable updates detected**\n\n"
+            "No comparable updates were detected. Hooks may already be current, use an unsupported "
+            "host or tag format, or have a current SHA that could not be resolved to a comparable SemVer tag."
         )
         return
 
