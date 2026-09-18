@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import json
 import re
 import subprocess
 from typing import Callable, Optional, Sequence
@@ -34,6 +35,14 @@ class GitHubRepository:
     def path(self) -> str:
         """Return the ``owner/name`` path used by the GitHub API."""
         return f"{self.owner}/{self.name}"
+
+
+@dataclass(frozen=True)
+class GitHubComparison:
+    """Bounded comparison details from the GitHub compare API."""
+
+    commits: list[str]
+    total_commits: int
 
 
 def parse_repository_url(repo_url: str) -> Optional[GitHubRepository]:
@@ -187,8 +196,8 @@ class GitHubClient:
             return None
         return self._query([f"repos/{repository.path}/releases/tags/{tag}", "-q", ".body"], missing_ok=True)
 
-    def commit_messages(self, repo_url: str, old_sha: str, new_sha: str) -> list[str]:
-        """Fetch up to ten commits in an inclusive GitHub comparison range.
+    def comparison(self, repo_url: str, old_sha: str, new_sha: str) -> GitHubComparison:
+        """Fetch bounded commit details and the full comparison commit count.
 
         Args:
             repo_url: Upstream GitHub repository URL.
@@ -196,14 +205,27 @@ class GitHubClient:
             new_sha: Head commit for the comparison.
 
         Returns:
-            Commit SHAs from ``old_sha...new_sha``, truncated to ten entries.
+            Full comparison count and up to ten commit SHAs from ``old_sha...new_sha``.
         """
         repository = parse_repository_url(repo_url)
         if not repository:
-            return []
+            return GitHubComparison(commits=[], total_commits=0)
         comparison = f"repos/{repository.path}/compare/{old_sha}...{new_sha}"
-        commits = self._query([comparison, "-q", ".commits[].sha"])
-        return commits.splitlines()[:10] if commits else []
+        response = self._query([comparison, "-q", '{total_commits: .total_commits, commits: [.commits[:10][].sha]}'])
+        if not response:
+            return GitHubComparison(commits=[], total_commits=0)
+        data = json.loads(response)
+        commits = data.get("commits", [])
+        total_commits = data.get("total_commits", len(commits))
+        if not isinstance(commits, list) or not all(isinstance(commit, str) for commit in commits):
+            raise GitHubQueryError(f"GitHub comparison for {repository.path} returned malformed commit data")
+        if not isinstance(total_commits, int):
+            raise GitHubQueryError(f"GitHub comparison for {repository.path} returned malformed total_commits")
+        return GitHubComparison(commits=commits, total_commits=total_commits)
+
+    def commit_messages(self, repo_url: str, old_sha: str, new_sha: str) -> list[str]:
+        """Fetch up to ten commits in an inclusive GitHub comparison range."""
+        return self.comparison(repo_url, old_sha, new_sha).commits
 
 
 def _is_not_found(result: subprocess.CompletedProcess[str]) -> bool:

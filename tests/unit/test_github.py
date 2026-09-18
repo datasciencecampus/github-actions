@@ -11,24 +11,35 @@ def test_parse_repository_url_accepts_git_suffix_and_rejects_other_hosts():
     assert parse_repository_url("https://gitlab.com/example/hook") is None
 
 
-def test_commit_messages_use_compare_range():
+def test_comparison_uses_compare_range_and_total_commit_count():
     calls = []
 
     def runner(command, **kwargs):
         calls.append((command, kwargs))
-        return SimpleNamespace(returncode=0, stdout="abc\ndef\n", stderr="")
+        return SimpleNamespace(returncode=0, stdout='{"total_commits":12,"commits":["abc","def"]}\n', stderr="")
 
-    commits = GitHubClient(runner=runner).commit_messages(
+    comparison = GitHubClient(runner=runner).comparison(
         "https://github.com/example/hook", "oldsha", "newsha"
     )
 
-    assert commits == ["abc", "def"]
+    assert comparison.commits == ["abc", "def"]
+    assert comparison.total_commits == 12
     assert calls[0][0] == [
         "gh",
         "api",
         "repos/example/hook/compare/oldsha...newsha",
         "-q",
-        ".commits[].sha",
+        '{total_commits: .total_commits, commits: [.commits[:10][].sha]}',
+    ]
+
+
+def test_commit_messages_returns_bounded_comparison_commits():
+    def runner(command, **kwargs):
+        return SimpleNamespace(returncode=0, stdout='{"total_commits":12,"commits":["abc","def"]}\n', stderr="")
+
+    assert GitHubClient(runner=runner).commit_messages("https://github.com/example/hook", "oldsha", "newsha") == [
+        "abc",
+        "def",
     ]
 
 

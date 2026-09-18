@@ -22,13 +22,13 @@ def enrich_updates(updates: list[dict[str, Any]], github: GitHubClient) -> list[
     for update in updates:
         tag = update["new_version"]
         release_notes = None if is_sha_like_version(tag) else github.release_notes(update["repo"], tag)
-        commits = github.commit_messages(update["repo"], update["old_sha"], update["new_sha"])
+        comparison = github.comparison(update["repo"], update["old_sha"], update["new_sha"])
         enriched.append(
             {
                 **update,
                 "release_notes": release_notes or "(No release notes available)",
-                "commits": commits,
-                "commit_count": len(commits),
+                "commits": comparison.commits,
+                "commit_count": comparison.total_commits,
             }
         )
     return enriched
