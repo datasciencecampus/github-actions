@@ -192,6 +192,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+          ref: ${{ github.ref_name }}
           path: caller
           persist-credentials: false
       - name: Check out workflow implementation
