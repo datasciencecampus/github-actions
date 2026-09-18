@@ -54,12 +54,11 @@ and `release_info`.
 
 ## Development
 
-Install the runtime dependencies from the repository root and run the focused
-unit tests:
+Install dependencies from the repository root and run the focused unit tests:
 
 ```shell
-pip install -r requirements.txt
-python -m pytest tests/unit -q
+uv sync --dev
+uv run pytest tests/unit -q
 ```
 
 The GitHub client is designed for mocked tests. Normal tests do not require
