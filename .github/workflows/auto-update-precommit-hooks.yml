@@ -80,7 +80,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           BRANCH_NAME: ${{ github.ref_name }}
         run: |
-          if git diff --quiet -- configs/precommit-update-tracking.json; then
+          if [ -z "$(git status --porcelain -- configs/precommit-update-tracking.json)" ]; then
             exit 0
           fi
           git config user.name "github-actions[bot]"
