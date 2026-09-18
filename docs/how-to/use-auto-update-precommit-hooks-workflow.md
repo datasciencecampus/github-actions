@@ -48,7 +48,7 @@ When calling with `workflow_call`, you can customize the behavior:
 
 ### Cooldown Periods
 
-The workflow respects semver-based cooldown periods to balance freshness with stability:
+The workflow respects semver-based cooldown periods measured from the candidate release publication time:
 
 | Level | Default Cooldown | Purpose |
 |-------|------------------|---------|
@@ -139,7 +139,7 @@ Highlights potential concerns:
 
 ### `configs/precommit-update-tracking.json`
 
-Tracks the last update timestamp and semver levels for each hook. This file is automatically created and updated by the workflow.
+Tracks the current SHA, version, and local adoption timestamps for each hook. This file is automatically created and updated by the workflow.
 
 **Manual inspection example:**
 
@@ -161,7 +161,7 @@ Tracks the last update timestamp and semver levels for each hook. This file is a
 }
 ```
 
-To manually reset a hook's cooldown, edit `semver_levels.{level}` to an earlier date.
+Cooldowns are based on the candidate release publication timestamp, so editing local adoption timestamps does not reset the waiting period.
 
 ### `configs/precommit-updates-config.json`
 
@@ -204,7 +204,7 @@ This means all pre-commit hooks are on their latest versions, or all available u
 ### A Specific Hook Never Updates
 
 Possible reasons:
-1. **Cooldown period active**: Check `configs/precommit-update-tracking.json` to see when the last update occurred
+1. **Cooldown period active**: Check the workflow summary to see how recently the candidate release was published
 2. **Hook is in skip list**: Check `skip_hooks` input or `configs/precommit-updates-config.json`
 3. **No releases available**: The upstream repository may not use GitHub releases. The workflow falls back to checking commits.
 
@@ -229,19 +229,9 @@ Edit `configs/precommit-updates-config.json` and add the hook URL to `hooks_to_s
 
 Then commit and push. The next workflow run will skip that hook.
 
-### Reset Cooldown for a Single Hook
+### Bypass Cooldown for a Single Run
 
-Edit `configs/precommit-update-tracking.json` and set the desired `semver_levels.{level}` to an old date (e.g., `2020-01-01T00:00:00Z`):
-
-```json
-"semver_levels": {
-  "major": "2020-01-01T00:00:00Z",
-  "minor": "2026-09-10T12:34:56Z",
-  "patch": "2026-09-10T12:34:56Z"
-}
-```
-
-Commit and push, then wait for the next scheduled caller run.
+Set `force_update: true` in the caller workflow for an urgent run. Remove the override after use so future releases follow the configured waiting period.
 
 ## See Also
 

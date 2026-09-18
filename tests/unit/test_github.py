@@ -32,11 +32,40 @@ def test_commit_messages_use_compare_range():
     ]
 
 
+def test_latest_release_returns_tag_sha_and_publication_time():
+    calls = []
+
+    def runner(command, **kwargs):
+        calls.append(command)
+        if "releases/latest" in command[2]:
+            return SimpleNamespace(returncode=0, stdout="v1.2.3\n2026-09-10T12:00:00Z\n", stderr="")
+        return SimpleNamespace(returncode=0, stdout="abc123\n", stderr="")
+
+    release = GitHubClient(runner=runner).latest_release("https://github.com/example/hook")
+
+    assert release == ("v1.2.3", "abc123", "2026-09-10T12:00:00Z")
+    assert calls[0] == [
+        "gh",
+        "api",
+        "repos/example/hook/releases/latest",
+        "-q",
+        '.tag_name + "\n" + .published_at',
+    ]
+
+
 def test_release_not_found_is_treated_as_missing_data():
     def runner(command, **kwargs):
         return SimpleNamespace(returncode=1, stdout="", stderr="gh: Not Found (HTTP 404)")
 
     assert GitHubClient(runner=runner).latest_release("https://github.com/example/hook") is None
+
+
+def test_latest_release_missing_publication_time_raises_query_error():
+    def runner(command, **kwargs):
+        return SimpleNamespace(returncode=0, stdout="v1.2.3\n", stderr="")
+
+    with pytest.raises(GitHubQueryError, match="published_at"):
+        GitHubClient(runner=runner).latest_release("https://github.com/example/hook")
 
 
 def test_failed_github_command_raises_query_error():

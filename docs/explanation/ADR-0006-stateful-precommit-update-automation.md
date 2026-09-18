@@ -14,7 +14,7 @@ This introduces an architectural trust boundary: most workflow stages only inspe
 Implement the automation as a stateful, staged workflow in `auto-update-precommit-hooks.yml`:
 
 1. **Detect updates** from tagged upstream releases and resolve each release tag to an immutable commit SHA. Only hooks with tagged releases are considered.
-2. **Apply policy** using semver-level cooldowns, the committed tracking file, the configured skip list, and an explicit manual `force_update` override.
+2. **Apply policy** using semver-level cooldowns measured from candidate release publication times, the configured skip list, and an explicit `force_update` override.
 3. **Fetch release context** such as release notes and commit information for updates that passed policy.
 4. **Write and propose changes** in a single job that updates `.pre-commit-config.yaml` and `configs/precommit-update-tracking.json`, pushes a bot branch, and creates a pull request. The default branch is changed only through the normal pull request review and merge process.
 
@@ -30,8 +30,8 @@ When the workflow is called as a reusable workflow, each Python job checks out t
 2. **Cooldowns reduce supply-chain exposure**
    A newly published release is not adopted immediately by default. Major updates wait 28 days, minor updates 14 days, and patch updates 7 days. The graduated periods reflect increasing compatibility risk while allowing security and bug-fix updates to move sooner. The waiting period also provides time for upstream issues or malicious releases to become visible.
 
-3. **Tracking state makes policy durable**
-   `configs/precommit-update-tracking.json` records the current SHA, current version, last update, and last update time for each semver level. Committing this state in the same pull request as the hook change makes cooldown decisions reproducible across scheduled runs and auditable in Git history.
+3. **Tracking state records adoption history**
+   `configs/precommit-update-tracking.json` records the current SHA, current version, last update, and last update time for each semver level. Committing this state in the same pull request as the hook change keeps local adoption history auditable in Git history, while cooldown decisions use candidate release publication times so newly published releases still wait even when the previous local update was months ago.
 
 4. **Pull requests preserve human control**
    The workflow creates a pull request containing release notes, commit information, cooldown policy, and risk warnings. It does not merge the change. Reviewers remain responsible for deciding whether an upstream release is suitable for the repository.
@@ -47,7 +47,7 @@ When the workflow is called as a reusable workflow, each Python job checks out t
 Positive:
 
 - Hook updates are commit-pinned, reviewable, and traceable to upstream releases.
-- Scheduled runs can make consistent cooldown decisions using committed state.
+- Scheduled runs make consistent cooldown decisions from upstream release publication timestamps.
 - The default branch is protected by the existing pull request review process.
 - Read-only jobs do not need write-capable credentials.
 - Release notes and risk information are available to reviewers in the generated pull request.
@@ -71,7 +71,7 @@ Negative:
 
 3. **Use only the current configuration as state**
    - Pro: No tracking file to maintain
-   - Con: There is no durable record of when each semver level was last adopted, making cooldown enforcement unreliable across runs
+   - Con: There is no durable record of when each semver level was last adopted, making adoption history less auditable
 
 4. **Adopt every available release immediately**
    - Pro: Fastest access to upstream fixes

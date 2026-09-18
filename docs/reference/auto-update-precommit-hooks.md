@@ -22,7 +22,7 @@ Complete reference for the auto-update pre-commit hooks workflow.
 **Required**: No  
 **Example**: `"14"` to reduce from 28 to 14 days
 
-**Rationale**: Major version updates may introduce breaking changes. A longer cooldown period allows time for upstream testing and community feedback before adoption.
+**Rationale**: Major version updates may introduce breaking changes. A longer cooldown period from the candidate release publication time allows time for upstream testing and community feedback before adoption.
 
 ---
 
@@ -48,7 +48,7 @@ Complete reference for the auto-update pre-commit hooks workflow.
 **Required**: No  
 **Example**: `"3"` to reduce from 7 to 3 days
 
-**Rationale**: Patch versions are bug fixes and security updates. A shorter cooldown is acceptable for patches, but 7 days is recommended for supply chain attack mitigation.
+**Rationale**: Patch versions are bug fixes and security updates. A shorter cooldown from the candidate release publication time is acceptable for patches, but 7 days is recommended for supply chain attack mitigation.
 
 ---
 
@@ -97,6 +97,7 @@ Complete reference for the auto-update pre-commit hooks workflow.
       "new_sha": "abc123def456...",
       "old_version": "v1.29.0",
       "new_version": "v1.30.0",
+      "candidate_published_at": "2026-09-10T12:00:00Z",
       "semver_level": "minor",
       "commit_range": "451b56af716f9f0d0c2b816503a3fd0cf8b036fa...abc123def456"
     }
@@ -180,7 +181,7 @@ Complete reference for the auto-update pre-commit hooks workflow.
 
 **Initialization**: The workflow initializes this file on first run using hooks from `.pre-commit-config.yaml`.
 
-**Persistence**: Updated automatically by the workflow after creating a PR.
+**Persistence**: Updated automatically by the workflow after creating a PR. Cooldown eligibility is based on each candidate release's publication timestamp, not these local adoption timestamps.
 
 ---
 
@@ -208,7 +209,7 @@ Complete reference for the auto-update pre-commit hooks workflow.
 - `hooks_to_skip`: Array of hook repository URLs to exclude from auto-updates
 - `enable_auto_updates`: Global flag to enable/disable auto-updates (currently informational; not enforced by workflow)
 
-**Precedence**: Workflow input parameters override these defaults when provided.
+**Precedence**: Workflow input parameters override these defaults when provided. Cooldown periods are measured from the candidate release publication timestamp.
 
 **Manual editing**: You can edit this file directly to change defaults or add hooks to the skip list.
 
@@ -318,7 +319,8 @@ If the workflow cannot parse a version (e.g., no release tag), it defaults to `P
 | Scenario | Behavior |
 |----------|----------|
 | No updates found | Job `no-updates` runs; logs message and exits successfully |
-| GitHub API limit exceeded | Workflow logs warning and continues with fallback data |
+| GitHub API limit exceeded | Workflow fails as indeterminate rather than reporting hooks as current |
+| Candidate release timestamp missing or invalid | Update is skipped because cooldown age cannot be established |
 | Release notes unavailable | Logs "(No release notes available)"; PR still created |
 | Commit history fetch fails | Uses short commit SHAs; PR still created |
 | PR creation fails | Workflow fails with error message; manual PR creation may be needed |
@@ -345,13 +347,13 @@ If the workflow cannot parse a version (e.g., no release tag), it defaults to `P
 2. The hook is in the `hooks_to_skip` list
 3. The upstream repository doesn't publish releases; check if commit history is being used instead
 
-Check `configs/precommit-update-tracking.json` for the last update timestamp per semver level.
+Check the workflow summary for skipped updates and cooldown remaining time.
 
 ---
 
 ### Q: Can I manually edit `precommit-update-tracking.json` to reset cooldowns?
 
-**A**: Yes. Edit the `semver_levels.{level}` timestamp to an earlier date to make updates available immediately. For example, set `"major": "2020-01-01T00:00:00Z"` to reset the major version cooldown.
+**A**: No. Cooldowns are measured from the candidate release publication timestamp, so editing local tracking timestamps does not make a newly published release eligible. Use `force_update` only when an urgent update justifies bypassing the waiting period.
 
 ---
 

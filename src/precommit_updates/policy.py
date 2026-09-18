@@ -52,27 +52,29 @@ def filter_updates(
             continue
 
         if not force_update:
-            timestamp = tracking.get("hooks", {}).get(repo, {}).get("semver_levels", {}).get(level)
-            if timestamp:
-                try:
-                    last_updated = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
-                    if last_updated.tzinfo is None:
-                        raise ValueError("timestamp must be timezone-aware")
-                except (TypeError, ValueError):
-                    skipped.append({**update, "reason": "Invalid cooldown timestamp"})
-                    continue
+            timestamp = update.get("candidate_published_at")
+            if not timestamp:
+                skipped.append({**update, "reason": "Missing candidate published timestamp"})
+                continue
+            try:
+                candidate_published = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+                if candidate_published.tzinfo is None:
+                    raise ValueError("timestamp must be timezone-aware")
+            except (AttributeError, TypeError, ValueError):
+                skipped.append({**update, "reason": "Invalid candidate published timestamp"})
+                continue
 
-                elapsed_days = (now.astimezone(timezone.utc) - last_updated.astimezone(timezone.utc)).days
-                required_days = cooldown.for_level(level)
-                if elapsed_days < required_days:
-                    skipped.append(
-                        {
-                            **update,
-                            "reason": f"Cooldown active: {elapsed_days}/{required_days} days",
-                            "days_remaining": required_days - elapsed_days,
-                        }
-                    )
-                    continue
+            elapsed_days = (now.astimezone(timezone.utc) - candidate_published.astimezone(timezone.utc)).days
+            required_days = cooldown.for_level(level)
+            if elapsed_days < required_days:
+                skipped.append(
+                    {
+                        **update,
+                        "reason": f"Cooldown active: {elapsed_days}/{required_days} days",
+                        "days_remaining": required_days - elapsed_days,
+                    }
+                )
+                continue
 
         eligible.append({**update, "cooldown_applied": cooldown.as_dict()})
 

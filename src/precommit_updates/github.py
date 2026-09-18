@@ -96,23 +96,33 @@ class GitHubClient:
             return None
         return result.stdout.strip()
 
-    def latest_release(self, repo_url: str) -> Optional[tuple[str, str]]:
-        """Return the latest release tag and its resolved commit SHA.
+    def latest_release(self, repo_url: str) -> Optional[tuple[str, str, str]]:
+        """Return the latest release tag, resolved commit SHA, and publication time.
 
         Args:
             repo_url: Upstream GitHub repository URL.
 
         Returns:
-            A ``(tag, sha)`` pair, or ``None`` when the repository has no readable release.
+            A ``(tag, sha, published_at)`` tuple, or ``None`` when the repository has no readable release.
         """
         repository = parse_repository_url(repo_url)
         if not repository:
             return None
-        tag = self._query([f"repos/{repository.path}/releases/latest", "-q", ".tag_name"], missing_ok=True)
-        if not tag:
+        release = self._query(
+            [f"repos/{repository.path}/releases/latest", "-q", '.tag_name + "\n" + .published_at'],
+            missing_ok=True,
+        )
+        if not release:
             return None
+        release_lines = release.splitlines()
+        if len(release_lines) < 2:
+            raise GitHubQueryError(f"Latest release for {repository.path} did not include published_at")
+        tag = release_lines[0].strip()
+        published_at = release_lines[1].strip()
+        if not published_at:
+            raise GitHubQueryError(f"Latest release for {repository.path} did not include published_at")
         sha = self._query([f"repos/{repository.path}/commits/{tag}", "-q", ".sha"])
-        return (tag, sha) if sha else None
+        return (tag, sha, published_at) if sha else None
 
     def tag_for_sha(self, repo_url: str, sha: str) -> Optional[str]:
         """Find a tag pointing at a commit SHA.

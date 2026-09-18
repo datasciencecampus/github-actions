@@ -54,7 +54,18 @@ def test_cooldown_command_reads_workflow_environment(tmp_path, monkeypatch):
     tracking.write_text(json.dumps({"hooks": {}}))
     output = tmp_path / "github-output"
     monkeypatch.setenv("GITHUB_OUTPUT", str(output))
-    monkeypatch.setenv("UPDATES_JSON", json.dumps([{"repo": "example", "semver_level": "patch"}]))
+    monkeypatch.setenv(
+        "UPDATES_JSON",
+        json.dumps(
+            [
+                {
+                    "repo": "example",
+                    "semver_level": "patch",
+                    "candidate_published_at": "2026-09-01T00:00:00+00:00",
+                }
+            ]
+        ),
+    )
 
     cli.cooldown_command(type("Args", (), {"tracking": str(tracking)})())
 

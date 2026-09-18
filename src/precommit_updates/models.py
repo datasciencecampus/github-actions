@@ -87,11 +87,13 @@ def determine_semver_level(old_version: str, new_version: str) -> str:
         new_version: Candidate semantic version tag.
 
     Returns:
-        ``major``, ``minor``, ``patch``, or ``unknown`` when either version is invalid.
+        ``major``, ``minor``, ``patch``, or ``unknown`` when either version is invalid or not an upgrade.
     """
     old = parse_version(old_version)
     new = parse_version(new_version)
     if not old or not new:
+        return "unknown"
+    if new <= old:
         return "unknown"
     if old[0] != new[0]:
         return "major"

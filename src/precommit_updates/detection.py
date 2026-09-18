@@ -45,7 +45,7 @@ def detect_updates(
         release_info = github.latest_release(repo_url)
         if not release_info:
             continue
-        latest_tag, latest_sha = release_info
+        latest_tag, latest_sha, candidate_published_at = release_info
         if latest_sha == current_sha:
             continue
 
@@ -63,6 +63,7 @@ def detect_updates(
                 "new_sha": latest_sha,
                 "old_version": old_version,
                 "new_version": latest_tag,
+                "candidate_published_at": candidate_published_at,
                 "semver_level": determine_semver_level(old_version, latest_tag),
                 "commit_range": f"{current_sha}...{latest_sha}",
             }

@@ -18,7 +18,16 @@ def test_parse_version(tag, expected):
 
 @pytest.mark.parametrize(
     ("old", "new", "level"),
-    [("v1.2.3", "v2.0.0", "major"), ("v1.2.3", "v1.3.0", "minor"), ("v1.2.3", "v1.2.4", "patch"), ("sha", "v1.2.4", "unknown")],
+    [
+        ("v1.2.3", "v2.0.0", "major"),
+        ("v1.2.3", "v1.3.0", "minor"),
+        ("v1.2.3", "v1.2.4", "patch"),
+        ("sha", "v1.2.4", "unknown"),
+        ("v2.0.0", "v1.9.9", "unknown"),
+        ("v1.3.0", "v1.2.9", "unknown"),
+        ("v1.2.4", "v1.2.3", "unknown"),
+        ("v1.2.3", "1.2.3", "unknown"),
+    ],
 )
 def test_determine_semver_level(old, new, level):
     assert determine_semver_level(old, new) == level
