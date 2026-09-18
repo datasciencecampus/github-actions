@@ -179,7 +179,15 @@ class GitHubClient:
             return None
         query = f'.[] | select(.commit.sha == "{sha}") | .name'
         tags = self._query(["--paginate", f"repos/{repository.path}/tags", "-q", query])
-        return tags.splitlines()[0] if tags else None
+        candidates = []
+        for tag in tags.splitlines() if tags else []:
+            version = parse_version(tag)
+            if version and "-" not in tag.partition("+")[0]:
+                candidates.append((version, tag))
+        if not candidates:
+            return None
+        _, tag = max(candidates, key=lambda candidate: (candidate[0], candidate[1]))
+        return tag
 
     def release_notes(self, repo_url: str, tag: str) -> Optional[str]:
         """Fetch release notes for a tag.

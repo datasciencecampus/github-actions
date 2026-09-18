@@ -79,6 +79,17 @@ def test_latest_tag_prefers_stable_tag_over_prerelease():
     )
 
 
+def test_tag_for_sha_ignores_aliases_and_selects_highest_stable_version():
+    def runner(command, **kwargs):
+        return SimpleNamespace(
+            returncode=0,
+            stdout="latest\n1.2.3\nv1.10.0\nv1.10.0-rc.1\n",
+            stderr="",
+        )
+
+    assert GitHubClient(runner=runner).tag_for_sha("https://github.com/example/hook", "abc") == "v1.10.0"
+
+
 def test_latest_tag_returns_none_when_no_semver_tags_exist():
     def runner(command, **kwargs):
         return SimpleNamespace(returncode=0, stdout="not-semver\tabc\n", stderr="")
