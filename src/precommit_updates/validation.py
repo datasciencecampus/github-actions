@@ -26,6 +26,7 @@ def initialize_tracking(config_path: Path, tracking_path: Path) -> None:
             if entry.get("repo") and entry.get("rev")
         },
     }
+    tracking_path.parent.mkdir(parents=True, exist_ok=True)
     with tracking_path.open("w") as tracking_file:
         json.dump(tracking, tracking_file, indent=2)
         tracking_file.write("\n")

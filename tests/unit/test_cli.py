@@ -256,7 +256,7 @@ def test_validate_command_rejects_sha_mismatch(tmp_path, capsys):
 
 def test_validate_command_initializes_missing_tracking_file(tmp_path, capsys):
     config = tmp_path / "pre-commit-config.yaml"
-    tracking = tmp_path / "tracking.json"
+    tracking = tmp_path / "configs" / "tracking.json"
     repo = "https://github.com/example/hooks"
     sha = "a" * 40
     config.write_text(f"repos:\n  - repo: {repo}\n    rev: {sha}\n")
