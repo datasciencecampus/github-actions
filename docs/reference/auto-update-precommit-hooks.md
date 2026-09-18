@@ -138,10 +138,12 @@ Complete reference for the auto-update pre-commit hooks workflow.
       "commit_range": "451b56af716f9f0d0c2b816503a3fd0cf8b036fa...abc123def456",
       "release_notes": "## v1.30.0\n\n### Features\n- Added feature X\n\n### Fixes\n- Fixed bug Y",
       "commits": ["abc123def456...", "def456ghi789..."],
-      "commit_count": 2
+      "commit_count": 12
     }
   ]
   ```
+
+    `commits` is capped at ten SHAs for display. `commit_count` is GitHub's full comparison `total_commits` value.
 
 ---
 

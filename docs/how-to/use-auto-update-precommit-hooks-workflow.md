@@ -122,7 +122,7 @@ v1.2.3 → v2.0.0
 </details>
 ```
 
-The **Commits** section (collapsible) shows the commits between the old and new versions. Click to expand.
+The **Commits** section (collapsible) shows up to ten commits between the old and new versions, while the heading count reflects GitHub's full comparison total. Click to expand.
 
 The **Release Notes** section (collapsible) shows the upstream release notes. Click to expand.
 
