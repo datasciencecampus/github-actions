@@ -217,6 +217,13 @@ def test_cooldown_command_honors_disabled_settings_file(tmp_path, monkeypatch):
     assert json.loads(values["skipped_updates"])[0]["reason"] == "Auto updates disabled in configuration"
 
 
+def test_update_branch_name_is_unique_per_workflow_attempt(monkeypatch):
+    monkeypatch.setenv("GITHUB_RUN_ID", "12345")
+    monkeypatch.setenv("GITHUB_RUN_ATTEMPT", "2")
+
+    assert cli._update_branch_name() == "chore/precommit-updates-12345-2"
+
+
 def test_validate_command_accepts_aligned_files(tmp_path, capsys):
     config = tmp_path / "pre-commit-config.yaml"
     tracking = tmp_path / "tracking.json"

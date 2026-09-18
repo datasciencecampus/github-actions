@@ -243,6 +243,17 @@ def release_info_command(args: argparse.Namespace) -> None:
     _write_output({"release_info": enrich_updates(updates, GitHubClient())})
 
 
+def _update_branch_name() -> str:
+    """Return a branch name unique to the workflow run and attempt."""
+    run_id = os.environ.get("GITHUB_RUN_ID", "").strip()
+    if run_id:
+        attempt = os.environ.get("GITHUB_RUN_ATTEMPT", "1").strip() or "1"
+        suffix = f"{run_id}-{attempt}"
+    else:
+        suffix = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
+    return f"chore/precommit-updates-{suffix}"
+
+
 def apply_command(args: argparse.Namespace) -> None:
     """Apply updates, commit them, push a branch, and create a pull request.
 
@@ -269,7 +280,7 @@ def apply_command(args: argparse.Namespace) -> None:
         repository=os.environ.get("GITHUB_REPOSITORY", "unknown"),
         server_url=os.environ.get("GITHUB_SERVER_URL", "https://github.com"),
     )
-    branch = f"chore/precommit-updates-{datetime.now(timezone.utc):%Y%m%d}"
+    branch = _update_branch_name()
     setup_commands = [
         ["git", "config", "user.name", "github-actions[bot]"],
         ["git", "config", "user.email", "41898282+github-actions[bot]@users.noreply.github.com"],
