@@ -28,33 +28,6 @@ on:
         required: false
         default: false
         type: boolean
-  workflow_dispatch:
-    inputs:
-      cooldown_major_days:
-        description: "Cooldown period for major version updates (days)"
-        required: false
-        default: "28"
-        type: string
-      cooldown_minor_days:
-        description: "Cooldown period for minor version updates (days)"
-        required: false
-        default: "14"
-        type: string
-      cooldown_patch_days:
-        description: "Cooldown period for patch version updates (days)"
-        required: false
-        default: "7"
-        type: string
-      skip_hooks:
-        description: "Comma-separated list of hook repo URLs to skip (e.g., https://github.com/owner/repo)"
-        required: false
-        default: ""
-        type: string
-      force_update:
-        description: "Bypass cooldown periods and update all eligible hooks"
-        required: false
-        default: false
-        type: boolean
   schedule:
     # Run weekly on Tuesday at 03:00 UTC
     - cron: "0 3 * * 2"
