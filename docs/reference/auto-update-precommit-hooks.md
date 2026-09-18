@@ -22,7 +22,7 @@ Complete reference for the auto-update pre-commit hooks workflow.
 **Required**: No  
 **Example**: `"14"` to reduce from 28 to 14 days
 
-**Rationale**: Major version updates may introduce breaking changes. A longer cooldown period from the candidate release publication time allows time for upstream testing and community feedback before adoption.
+**Rationale**: Major version updates may introduce breaking changes. A longer cooldown period from the time this workflow first sees the candidate tag allows time for upstream testing and community feedback before adoption.
 
 ---
 
@@ -48,7 +48,7 @@ Complete reference for the auto-update pre-commit hooks workflow.
 **Required**: No  
 **Example**: `"3"` to reduce from 7 to 3 days
 
-**Rationale**: Patch versions are bug fixes and security updates. A shorter cooldown from the candidate release publication time is acceptable for patches, but 7 days is recommended for supply chain attack mitigation.
+**Rationale**: Patch versions are bug fixes and security updates. A shorter cooldown from the time this workflow first sees the candidate tag is acceptable for patches, but 7 days is recommended for supply chain attack mitigation.
 
 ---
 
@@ -97,7 +97,7 @@ Complete reference for the auto-update pre-commit hooks workflow.
       "new_sha": "abc123def456...",
       "old_version": "v1.29.0",
       "new_version": "v1.30.0",
-      "candidate_published_at": "2026-09-10T12:00:00Z",
+      "candidate_first_seen_at": "2026-09-10T12:00:00Z",
       "semver_level": "minor",
       "commit_range": "451b56af716f9f0d0c2b816503a3fd0cf8b036fa...abc123def456"
     }
@@ -133,6 +133,7 @@ Complete reference for the auto-update pre-commit hooks workflow.
       "new_sha": "abc123def456...",
       "old_version": "v1.29.0",
       "new_version": "v1.30.0",
+      "candidate_first_seen_at": "2026-09-10T12:00:00Z",
       "semver_level": "minor",
       "commit_range": "451b56af716f9f0d0c2b816503a3fd0cf8b036fa...abc123def456",
       "release_notes": "## v1.30.0\n\n### Features\n- Added feature X\n\n### Fixes\n- Fixed bug Y",
@@ -162,6 +163,12 @@ Complete reference for the auto-update pre-commit hooks workflow.
         "major": "2026-07-15T10:00:00Z",
         "minor": "2026-08-20T14:30:00Z",
         "patch": "2026-09-08T09:15:00Z"
+      },
+      "candidate_updates": {
+        "v1.30.0": {
+          "sha": "abc123def456...",
+          "first_seen_at": "2026-09-10T12:00:00Z"
+        }
       }
     }
   }
@@ -178,10 +185,12 @@ Complete reference for the auto-update pre-commit hooks workflow.
   - `major`: Last major version update
   - `minor`: Last minor version update
   - `patch`: Last patch version update
+- `hooks[{repo_url}].candidate_updates.{tag}.sha`: Commit SHA for a candidate SemVer tag under cooldown
+- `hooks[{repo_url}].candidate_updates.{tag}.first_seen_at`: First time this workflow observed the candidate tag/SHA pair
 
 **Initialization**: The workflow initializes this file on first run using hooks from `.pre-commit-config.yaml`.
 
-**Persistence**: Updated automatically by the workflow after creating a PR. Cooldown eligibility is based on each candidate release's publication timestamp, not these local adoption timestamps.
+**Persistence**: Candidate first-seen state is committed by the detection job so cooldown windows can elapse across scheduled runs. Adoption history is updated after creating an update PR. Cooldown eligibility is based on candidate first-seen timestamps, not local adoption timestamps.
 
 ---
 
@@ -209,7 +218,7 @@ Complete reference for the auto-update pre-commit hooks workflow.
 - `hooks_to_skip`: Array of hook repository URLs to exclude from auto-updates
 - `enable_auto_updates`: Global flag to enable/disable auto-updates
 
-**Precedence**: Workflow input parameters override file defaults when provided. Cooldown periods are measured from the candidate release publication timestamp.
+**Precedence**: Workflow input parameters override file defaults when provided. Cooldown periods are measured from the candidate tag's first-seen timestamp.
 
 **Manual editing**: You can edit this file directly to change defaults, add hooks to the persistent skip list, or disable automatic updates.
 
@@ -275,11 +284,12 @@ The following updates are available but skipped...
 
 ### `workflow_call` (Reusable Workflow)
 
-1. Detects available updates
-2. Applies cooldown filters (respecting input overrides)
-3. Fetches release notes and commit history
-4. Updates `.pre-commit-config.yaml` and `precommit-update-tracking.json`
-5. Creates a PR on the `main` branch from a feature branch
+1. Detects available SemVer tag updates
+2. Persists first-seen candidate state when new candidate tags are observed
+3. Applies cooldown filters (respecting input overrides)
+4. Fetches release notes and commit history
+5. Updates `.pre-commit-config.yaml` and `precommit-update-tracking.json`
+6. Creates a PR on the `main` branch from a feature branch
 
 **Branch naming**: `chore/precommit-updates-{YYYYMMDD}`
 
@@ -308,9 +318,9 @@ The workflow determines update severity using semantic versioning:
 | v1.2.3 | v2.0.0 | **MAJOR** | 28 days |
 | v1.2.3 | v1.3.0 | **MINOR** | 14 days |
 | v1.2.3 | v1.2.4 | **PATCH** | 7 days |
-| {sha} | {new_sha} | **PATCH** | 7 days (if no tag) |
+| {sha} | {new_sha} | Unsupported | N/A unless the current SHA can be resolved to a SemVer tag |
 
-If the workflow cannot parse a version (e.g., no release tag), it defaults to `PATCH` level.
+If the workflow cannot parse comparable semantic versions, it skips the candidate as unsupported rather than guessing an update level.
 
 ---
 
@@ -320,7 +330,7 @@ If the workflow cannot parse a version (e.g., no release tag), it defaults to `P
 |----------|----------|
 | No updates found | Job `no-updates` runs; logs message and exits successfully |
 | GitHub API limit exceeded | Workflow fails as indeterminate rather than reporting hooks as current |
-| Candidate release timestamp missing or invalid | Update is skipped because cooldown age cannot be established |
+| Candidate first-seen timestamp missing or invalid | Update is skipped because cooldown age cannot be established |
 | Release notes unavailable | Logs "(No release notes available)"; PR still created |
 | Commit history fetch fails | Uses short commit SHAs; PR still created |
 | PR creation fails | Workflow fails with error message; manual PR creation may be needed |
@@ -343,9 +353,9 @@ If the workflow cannot parse a version (e.g., no release tag), it defaults to `P
 ### Q: Why does the workflow show "No updates found" even though I see a new release?
 
 **A**: Possible reasons:
-1. The new release was published less than the configured cooldown period ago
+1. The candidate tag was first seen less than the configured cooldown period ago
 2. The hook is in the `hooks_to_skip` list
-3. The upstream repository does not publish GitHub Releases; repositories without GitHub Releases are unsupported by this workflow
+3. The upstream repository does not publish comparable SemVer tags
 
 Check the workflow summary for skipped updates and cooldown remaining time.
 
@@ -353,7 +363,7 @@ Check the workflow summary for skipped updates and cooldown remaining time.
 
 ### Q: Can I manually edit `precommit-update-tracking.json` to reset cooldowns?
 
-**A**: No. Cooldowns are measured from the candidate release publication timestamp, so editing local tracking timestamps does not make a newly published release eligible. Use `force_update` only when an urgent update justifies bypassing the waiting period.
+**A**: No. Cooldowns are measured from the candidate first-seen timestamp, so editing local adoption timestamps does not make a newly observed tag eligible. Use `force_update` only when an urgent update justifies bypassing the waiting period.
 
 ---
 

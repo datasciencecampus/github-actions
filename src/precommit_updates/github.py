@@ -7,6 +7,8 @@ import re
 import subprocess
 from typing import Callable, Optional, Sequence
 
+from .models import parse_version
+
 
 CommandRunner = Callable[..., subprocess.CompletedProcess[str]]
 _REPOSITORY_PATTERN = re.compile(r"^https://github\.com/([^/]+)/([^/]+?)(?:\.git)?/?$")
@@ -95,6 +97,35 @@ class GitHubClient:
         if not result.stdout.strip():
             return None
         return result.stdout.strip()
+
+    def latest_tag(self, repo_url: str) -> Optional[tuple[str, str]]:
+        """Return the highest semantic version tag and its resolved commit SHA.
+
+        Args:
+            repo_url: Upstream GitHub repository URL.
+
+        Returns:
+            A ``(tag, sha)`` tuple, or ``None`` when the repository has no semantic version tags.
+        """
+        repository = parse_repository_url(repo_url)
+        if not repository:
+            return None
+        tags = self._query(
+            ["--paginate", f"repos/{repository.path}/tags", "-q", '.[] | [.name, .commit.sha] | @tsv']
+        )
+        candidates: list[tuple[tuple[int, int, int], str, str]] = []
+        for line in tags.splitlines() if tags else []:
+            try:
+                tag, sha = line.split("\t", 1)
+            except ValueError:
+                continue
+            version = parse_version(tag)
+            if version:
+                candidates.append((version, tag, sha))
+        if not candidates:
+            return None
+        _, tag, sha = max(candidates, key=lambda candidate: candidate[0])
+        return tag, sha
 
     def latest_release(self, repo_url: str) -> Optional[tuple[str, str, str]]:
         """Return the latest release tag, resolved commit SHA, and publication time.

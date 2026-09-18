@@ -63,7 +63,7 @@ def test_cooldown_command_reads_settings_file_defaults(tmp_path, monkeypatch):
                 {
                     "repo": "example",
                     "semver_level": "patch",
-                    "candidate_published_at": "2999-09-01T00:00:00+00:00",
+                    "candidate_first_seen_at": "2999-09-01T00:00:00+00:00",
                 }
             ]
         ),
@@ -91,7 +91,7 @@ def test_cooldown_command_environment_overrides_settings_file(tmp_path, monkeypa
                 {
                     "repo": "example",
                     "semver_level": "patch",
-                    "candidate_published_at": "2026-09-01T00:00:00+00:00",
+                    "candidate_first_seen_at": "2026-09-01T00:00:00+00:00",
                 }
             ]
         ),
@@ -113,7 +113,7 @@ def test_cooldown_command_reads_persistent_skip_list(tmp_path, monkeypatch):
     monkeypatch.setenv("GITHUB_OUTPUT", str(output))
     monkeypatch.setenv(
         "UPDATES_JSON",
-        json.dumps([{"repo": "example", "semver_level": "patch", "candidate_published_at": "2026-09-01T00:00:00+00:00"}]),
+        json.dumps([{"repo": "example", "semver_level": "patch", "candidate_first_seen_at": "2026-09-01T00:00:00+00:00"}]),
     )
 
     cli.cooldown_command(type("Args", (), {"tracking": str(tracking), "settings": str(settings)})())
@@ -133,7 +133,7 @@ def test_cooldown_command_environment_skip_list_overrides_settings_file(tmp_path
     monkeypatch.setenv("SKIP_HOOKS", "other")
     monkeypatch.setenv(
         "UPDATES_JSON",
-        json.dumps([{"repo": "example", "semver_level": "patch", "candidate_published_at": "2026-09-01T00:00:00+00:00"}]),
+        json.dumps([{"repo": "example", "semver_level": "patch", "candidate_first_seen_at": "2026-09-01T00:00:00+00:00"}]),
     )
 
     cli.cooldown_command(type("Args", (), {"tracking": str(tracking), "settings": str(settings)})())
@@ -152,7 +152,7 @@ def test_cooldown_command_honors_disabled_settings_file(tmp_path, monkeypatch):
     monkeypatch.setenv("GITHUB_OUTPUT", str(output))
     monkeypatch.setenv(
         "UPDATES_JSON",
-        json.dumps([{"repo": "example", "semver_level": "patch", "candidate_published_at": "2026-09-01T00:00:00+00:00"}]),
+        json.dumps([{"repo": "example", "semver_level": "patch", "candidate_first_seen_at": "2026-09-01T00:00:00+00:00"}]),
     )
 
     cli.cooldown_command(type("Args", (), {"tracking": str(tracking), "settings": str(settings)})())

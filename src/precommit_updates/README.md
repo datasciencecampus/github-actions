@@ -19,7 +19,7 @@ PYTHONPATH=src python3 -m precommit_updates apply
 
 The stages correspond to the workflow jobs:
 
-- `detect` finds newer tagged releases and resolves them to commit SHAs.
+- `detect` finds newer SemVer tags, records first-seen candidate state, and resolves tags to commit SHAs.
 - `cooldown` applies skip-list, force-update, and semver cooldown policy.
 - `release-info` adds release notes and commits from the requested comparison range.
 - `apply` updates the YAML and tracking files, creates one commit per hook, pushes

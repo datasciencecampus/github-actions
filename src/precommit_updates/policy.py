@@ -52,19 +52,19 @@ def filter_updates(
             continue
 
         if not force_update:
-            timestamp = update.get("candidate_published_at")
+            timestamp = update.get("candidate_first_seen_at")
             if not timestamp:
-                skipped.append({**update, "reason": "Missing candidate published timestamp"})
+                skipped.append({**update, "reason": "Missing candidate first-seen timestamp"})
                 continue
             try:
-                candidate_published = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
-                if candidate_published.tzinfo is None:
+                candidate_first_seen = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+                if candidate_first_seen.tzinfo is None:
                     raise ValueError("timestamp must be timezone-aware")
             except (AttributeError, TypeError, ValueError):
-                skipped.append({**update, "reason": "Invalid candidate published timestamp"})
+                skipped.append({**update, "reason": "Invalid candidate first-seen timestamp"})
                 continue
 
-            elapsed_days = (now.astimezone(timezone.utc) - candidate_published.astimezone(timezone.utc)).days
+            elapsed_days = (now.astimezone(timezone.utc) - candidate_first_seen.astimezone(timezone.utc)).days
             required_days = cooldown.for_level(level)
             if elapsed_days < required_days:
                 skipped.append(

@@ -5,7 +5,7 @@ This guide explains how to use the auto-update pre-commit hooks workflow to keep
 ## Overview
 
 The auto-update workflow:
-- Detects new releases for pre-commit hooks defined in `.pre-commit-config.yaml`
+- Detects newer SemVer tags for pre-commit hooks defined in `.pre-commit-config.yaml`
 - Applies semver-based cooldown periods to prevent overly frequent updates
 - Creates informative pull requests with release summaries and risk assessments
 - Can run on a schedule or be called from another workflow
@@ -48,7 +48,7 @@ When calling with `workflow_call`, you can customize the behavior:
 
 ### Cooldown Periods
 
-The workflow respects semver-based cooldown periods measured from the candidate release publication time:
+The workflow respects semver-based cooldown periods measured from when a candidate tag was first seen by this workflow:
 
 | Level | Default Cooldown | Purpose |
 |-------|------------------|---------|
@@ -139,7 +139,7 @@ Highlights potential concerns:
 
 ### `configs/precommit-update-tracking.json`
 
-Tracks the current SHA, version, and local adoption timestamps for each hook. This file is automatically created and updated by the workflow.
+Tracks the current SHA, version, local adoption timestamps, and first-seen candidate tags for each hook. This file is automatically created and updated by the workflow.
 
 **Manual inspection example:**
 
@@ -155,13 +155,19 @@ Tracks the current SHA, version, and local adoption timestamps for each hook. Th
         "major": "2026-07-15T10:00:00Z",
         "minor": "2026-08-20T14:30:00Z",
         "patch": "2026-09-08T09:15:00Z"
+      },
+      "candidate_updates": {
+        "v1.30.0": {
+          "sha": "def456...",
+          "first_seen_at": "2026-09-10T12:34:56Z"
+        }
       }
     }
   }
 }
 ```
 
-Cooldowns are based on the candidate release publication timestamp, so editing local adoption timestamps does not reset the waiting period.
+Cooldowns are based on the candidate tag's first-seen timestamp, so editing local adoption timestamps does not reset the waiting period.
 
 ### `configs/precommit-updates-config.json`
 
@@ -204,16 +210,16 @@ This means all pre-commit hooks are on their latest versions, or all available u
 ### A Specific Hook Never Updates
 
 Possible reasons:
-1. **Cooldown period active**: Check the workflow summary to see how recently the candidate release was published
+1. **Cooldown period active**: Check the workflow summary to see when the candidate tag was first seen
 2. **Hook is in skip list**: Check `skip_hooks` input or `configs/precommit-updates-config.json`
-3. **No releases available**: The upstream repository may not use GitHub Releases. Repositories without GitHub Releases are unsupported by this workflow.
+3. **No supported tags available**: The upstream repository may not publish SemVer tags that can be compared with the configured hook version.
 
 To force an update:
 - Call the workflow with `force_update: true`
 
-### Workflow Fails While Fetching Release Data
+### Workflow Fails While Fetching Tag Data
 
-API errors, rate limits, missing `gh`, and timeouts make detection indeterminate. The workflow fails instead of reporting hooks as current when it cannot reliably query release data.
+API errors, rate limits, missing `gh`, and timeouts make detection indeterminate. The workflow fails instead of reporting hooks as current when it cannot reliably query tag data.
 
 ## Advanced: Manual Configuration
 

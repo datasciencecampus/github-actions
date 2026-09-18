@@ -10,7 +10,7 @@ NOW = datetime(2026, 9, 17, tzinfo=timezone.utc)
 UPDATE = {
     "repo": "https://github.com/example/hook",
     "semver_level": "patch",
-    "candidate_published_at": (NOW - timedelta(days=7)).isoformat(),
+    "candidate_first_seen_at": (NOW - timedelta(days=7)).isoformat(),
 }
 
 
@@ -21,7 +21,7 @@ def tracking_at(days_ago: int) -> dict:
 
 def test_cooldown_skips_before_boundary_and_allows_at_boundary():
     config = CooldownConfig(patch=7)
-    recent_update = {**UPDATE, "candidate_published_at": (NOW - timedelta(days=6)).isoformat()}
+    recent_update = {**UPDATE, "candidate_first_seen_at": (NOW - timedelta(days=6)).isoformat()}
     eligible, skipped = filter_updates([recent_update], tracking_at(365), config, now=NOW)
     assert not eligible
     assert skipped[0]["days_remaining"] == 1
@@ -49,20 +49,20 @@ def test_force_update_bypasses_cooldown():
 
 def test_unknown_level_and_invalid_timestamp_are_skipped():
     unknown = {"repo": "unknown", "semver_level": "unknown"}
-    malformed = {**UPDATE, "candidate_published_at": "not-a-date"}
+    malformed = {**UPDATE, "candidate_first_seen_at": "not-a-date"}
     missing = {"repo": UPDATE["repo"], "semver_level": "patch"}
     tracking = {"hooks": {UPDATE["repo"]: {"semver_levels": {"patch": "not-a-date"}}}}
     eligible, skipped = filter_updates([unknown, malformed, missing], tracking, CooldownConfig(), now=NOW)
     assert not eligible
     assert [item["reason"] for item in skipped] == [
         "Unsupported semantic version level",
-        "Invalid candidate published timestamp",
-        "Missing candidate published timestamp",
+        "Invalid candidate first-seen timestamp",
+        "Missing candidate first-seen timestamp",
     ]
 
 
-def test_local_update_timestamp_does_not_make_new_release_eligible():
-    recent_release = {**UPDATE, "candidate_published_at": (NOW - timedelta(days=1)).isoformat()}
+def test_local_update_timestamp_does_not_make_new_candidate_eligible():
+    recent_release = {**UPDATE, "candidate_first_seen_at": (NOW - timedelta(days=1)).isoformat()}
     old_local_update = tracking_at(365)
 
     eligible, skipped = filter_updates([recent_release], old_local_update, CooldownConfig(), now=NOW)

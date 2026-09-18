@@ -76,6 +76,7 @@ def apply_updates(
         level = update.get("semver_level")
         if level in ("major", "minor", "patch"):
             hook["semver_levels"][level] = timestamp
+        hook.pop("candidate_updates", None)
         hook["last_updated"] = timestamp
 
     tracking["last_updated"] = timestamp

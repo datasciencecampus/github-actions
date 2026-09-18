@@ -32,6 +32,35 @@ def test_commit_messages_use_compare_range():
     ]
 
 
+def test_latest_tag_returns_highest_semver_tag_and_sha():
+    calls = []
+
+    def runner(command, **kwargs):
+        calls.append(command)
+        return SimpleNamespace(
+            returncode=0,
+            stdout="v1.2.0\taaa\nnot-semver\tbbb\nv1.10.0\tccc\n",
+            stderr="",
+        )
+
+    assert GitHubClient(runner=runner).latest_tag("https://github.com/example/hook") == ("v1.10.0", "ccc")
+    assert calls[0] == [
+        "gh",
+        "api",
+        "--paginate",
+        "repos/example/hook/tags",
+        "-q",
+        '.[] | [.name, .commit.sha] | @tsv',
+    ]
+
+
+def test_latest_tag_returns_none_when_no_semver_tags_exist():
+    def runner(command, **kwargs):
+        return SimpleNamespace(returncode=0, stdout="not-semver\tabc\n", stderr="")
+
+    assert GitHubClient(runner=runner).latest_tag("https://github.com/example/hook") is None
+
+
 def test_latest_release_returns_tag_sha_and_publication_time():
     calls = []
 
@@ -73,7 +102,7 @@ def test_failed_github_command_raises_query_error():
         return SimpleNamespace(returncode=1, stdout="", stderr="failure")
 
     with pytest.raises(GitHubQueryError, match="failure"):
-        GitHubClient(runner=runner).latest_release("https://github.com/example/hook")
+        GitHubClient(runner=runner).latest_tag("https://github.com/example/hook")
 
 
 def test_timed_out_github_command_raises_query_error():
@@ -81,7 +110,7 @@ def test_timed_out_github_command_raises_query_error():
         raise subprocess.TimeoutExpired(command, timeout=10)
 
     with pytest.raises(GitHubQueryError, match="timed out"):
-        GitHubClient(runner=runner).latest_release("https://github.com/example/hook")
+        GitHubClient(runner=runner).latest_tag("https://github.com/example/hook")
 
 
 def test_missing_gh_raises_query_error():
@@ -89,4 +118,4 @@ def test_missing_gh_raises_query_error():
         raise FileNotFoundError("gh")
 
     with pytest.raises(GitHubQueryError, match="failed to start"):
-        GitHubClient(runner=runner).latest_release("https://github.com/example/hook")
+        GitHubClient(runner=runner).latest_tag("https://github.com/example/hook")

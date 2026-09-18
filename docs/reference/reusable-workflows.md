@@ -267,7 +267,7 @@ Infrastructure-as-code and configuration security scanning using `checkov`.
 
 Workflow file: `.github/workflows/auto-update-precommit-hooks.yml`
 
-Detects tagged releases for pre-commit hooks in the caller repository, applies cooldown policy using caller configuration, and opens a pull request with the proposed updates.
+Detects newer SemVer tags for pre-commit hooks in the caller repository, applies cooldown policy using caller configuration, and opens a pull request with the proposed updates.
 
 ### Auto-Update Triggers
 
@@ -287,12 +287,13 @@ Detects tagged releases for pre-commit hooks in the caller repository, applies c
 1. Checks out the caller repository into `caller`.
 2. Checks out this repository into `implementation` at the invoked workflow SHA.
 3. Installs the Python implementation package from `implementation`.
-4. Runs detection, cooldown filtering, release enrichment, and pull request creation from the `caller` workspace.
+4. Runs detection, first-seen candidate persistence, cooldown filtering, release enrichment, and pull request creation from the `caller` workspace.
 
 ### Auto-Update Notes
 
 - The caller repository must contain `.pre-commit-config.yaml`.
 - The tracking file defaults to `configs/precommit-update-tracking.json` in the caller repository and is initialized by the workflow if missing.
+- Candidate tag first-seen state is committed to the caller repository so cooldown windows can elapse across workflow runs.
 - Persistent defaults are read from `configs/precommit-updates-config.json` in the caller repository when present.
 - This workflow does not use the project-routing `implementation_ref` dispatch model.
 

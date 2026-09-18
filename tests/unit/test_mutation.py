@@ -10,7 +10,18 @@ def test_apply_updates_preserves_yaml_comments_and_updates_only_changed_level(tm
     config_path.write_text(
         "repos:\n  - repo: https://github.com/example/hook\n    rev: oldsha  # frozen: v1.0.0\n    hooks: []\n"
     )
-    tracking_path.write_text(json.dumps({"hooks": {"https://github.com/example/hook": {"semver_levels": {"major": "old", "minor": "old", "patch": "old"}}}}))
+    tracking_path.write_text(
+        json.dumps(
+            {
+                "hooks": {
+                    "https://github.com/example/hook": {
+                        "semver_levels": {"major": "old", "minor": "old", "patch": "old"},
+                        "candidate_updates": {"v1.0.1": {"sha": "newsha", "first_seen_at": "old"}},
+                    }
+                }
+            }
+        )
+    )
 
     apply_updates(
         config_path,
@@ -23,3 +34,4 @@ def test_apply_updates_preserves_yaml_comments_and_updates_only_changed_level(tm
     tracking = json.loads(tracking_path.read_text())
     assert tracking["hooks"]["https://github.com/example/hook"]["semver_levels"]["patch"] == "2026-09-17T00:00:00+00:00"
     assert tracking["hooks"]["https://github.com/example/hook"]["semver_levels"]["major"] == "old"
+    assert "candidate_updates" not in tracking["hooks"]["https://github.com/example/hook"]
