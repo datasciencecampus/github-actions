@@ -1,0 +1,247 @@
+name: Auto-Update Pre-Commit Hooks
+
+on:
+  workflow_call:
+    inputs:
+      cooldown_major_days:
+        description: "Cooldown period for major version updates (days)"
+        required: false
+        type: string
+      cooldown_minor_days:
+        description: "Cooldown period for minor version updates (days)"
+        required: false
+        type: string
+      cooldown_patch_days:
+        description: "Cooldown period for patch version updates (days)"
+        required: false
+        type: string
+      skip_hooks:
+        description: "Comma-separated list of hook repo URLs to skip (e.g., https://github.com/owner/repo)"
+        required: false
+        type: string
+      force_update:
+        description: "Bypass cooldown periods and update all eligible hooks"
+        required: false
+        default: false
+        type: boolean
+  schedule:
+    # Run weekly on Tuesday at 03:00 UTC
+    - cron: "0 3 * * 2"
+
+concurrency:
+  group: auto-update-precommit-hooks
+  cancel-in-progress: false
+
+permissions: {} # Deny token access by default; jobs grant only the permissions they need.
+
+jobs:
+  detect-updates:
+    name: Detect Available Updates
+    runs-on: ubuntu-latest
+    permissions: # Each job receives only the repository access required for its stage.
+      contents: write # Required to inspect the pre-commit configuration and persist first-seen candidate state.
+    outputs:
+      auto_updates_enabled: ${{ steps.detect.outputs.auto_updates_enabled }}
+      updates_found: ${{ steps.detect.outputs.updates_found }}
+      updates_json: ${{ steps.detect.outputs.updates_json }}
+    steps:
+      - name: Check out caller repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          path: caller
+          persist-credentials: false
+      - name: Check out workflow implementation
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: datasciencecampus/github-actions
+          ref: ${{ github.workflow_sha }}
+          path: implementation
+          persist-credentials: false
+      - name: Install uv
+        uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          version: "0.12.3"
+          python-version: "3.13"
+          activate-environment: true
+          working-directory: caller
+      - name: Install package
+        run: uv pip install ../implementation
+        working-directory: caller
+      - name: Validate pre-commit tracking alignment
+        run: python -m precommit_updates validate
+        working-directory: caller
+      - name: Detect available updates
+        id: detect
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python -m precommit_updates detect
+        working-directory: caller
+      - name: Persist first-seen candidate state
+        if: steps.detect.outputs.auto_updates_enabled == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH_NAME: ${{ github.ref_name }}
+        run: |
+          if [ -z "$(git status --porcelain -- configs/precommit-update-tracking.json)" ]; then
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          gh auth setup-git
+          git add configs/precommit-update-tracking.json
+          git commit -m "chore(pre-commit): record first-seen hook candidates"
+          git push origin "HEAD:${BRANCH_NAME}"
+        working-directory: caller
+
+  apply-cooldown:
+    name: Apply Cooldown Filters
+    needs: detect-updates
+    runs-on: ubuntu-latest
+    permissions: # Each job receives only the repository access required for its stage.
+      contents: read # Required to read tracking data while applying cooldown policy.
+    outputs:
+      eligible_updates: ${{ steps.cooldown.outputs.eligible_updates }}
+      skipped_updates: ${{ steps.cooldown.outputs.skipped_updates }}
+    if: needs.detect-updates.outputs.updates_found == 'true'
+    steps:
+      - name: Check out caller repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: caller
+          persist-credentials: false
+      - name: Check out workflow implementation
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: datasciencecampus/github-actions
+          ref: ${{ github.workflow_sha }}
+          path: implementation
+          persist-credentials: false
+      - name: Install uv
+        uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          version: "0.12.3"
+          python-version: "3.13"
+          activate-environment: true
+          working-directory: caller
+      - name: Install package
+        run: uv pip install ../implementation
+        working-directory: caller
+      - name: Apply cooldown filters
+        id: cooldown
+        env:
+          UPDATES_JSON: ${{ needs.detect-updates.outputs.updates_json }}
+          FORCE_UPDATE: ${{ inputs.force_update || false }}
+          SKIP_HOOKS: ${{ inputs.skip_hooks || '' }}
+          COOLDOWN_MAJOR: ${{ inputs.cooldown_major_days || '' }}
+          COOLDOWN_MINOR: ${{ inputs.cooldown_minor_days || '' }}
+          COOLDOWN_PATCH: ${{ inputs.cooldown_patch_days || '' }}
+        run: python -m precommit_updates cooldown
+        working-directory: caller
+
+  fetch-release-info:
+    name: Fetch Release Information
+    needs: apply-cooldown
+    runs-on: ubuntu-latest
+    permissions: # Each job receives only the repository access required for its stage.
+      contents: read # Required to read repository metadata for release enrichment.
+    outputs:
+      release_info: ${{ steps.release.outputs.release_info }}
+    if: needs.apply-cooldown.outputs.eligible_updates != '[]' && needs.apply-cooldown.outputs.eligible_updates != ''
+    steps:
+      - name: Check out caller repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: caller
+          persist-credentials: false
+      - name: Check out workflow implementation
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: datasciencecampus/github-actions
+          ref: ${{ github.workflow_sha }}
+          path: implementation
+          persist-credentials: false
+      - name: Install uv
+        uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          version: "0.12.3"
+          python-version: "3.13"
+          activate-environment: true
+          working-directory: caller
+      - name: Install package
+        run: uv pip install ../implementation
+        working-directory: caller
+      - name: Fetch release information
+        id: release
+        env:
+          ELIGIBLE_JSON: ${{ needs.apply-cooldown.outputs.eligible_updates }}
+          GH_TOKEN: ${{ github.token }}
+        run: python -m precommit_updates release-info
+        working-directory: caller
+
+  update-config-and-create-pr:
+    name: Update Config and Create PR
+    needs: [detect-updates, apply-cooldown, fetch-release-info]
+    runs-on: ubuntu-latest
+    permissions: # The final job needs write access to publish the update branch and pull request.
+      contents: write # Required to commit and push updated pre-commit configuration.
+      pull-requests: write # Required to create the update pull request.
+    if: needs.apply-cooldown.outputs.eligible_updates != '[]' && needs.apply-cooldown.outputs.eligible_updates != ''
+    steps:
+      - name: Check out caller repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          ref: ${{ github.ref_name }}
+          path: caller
+          persist-credentials: false
+      - name: Check out workflow implementation
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: datasciencecampus/github-actions
+          ref: ${{ github.workflow_sha }}
+          path: implementation
+          persist-credentials: false
+      - name: Install uv
+        uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          version: "0.12.3"
+          python-version: "3.13"
+          activate-environment: true
+          working-directory: caller
+      - name: Install package
+        run: uv pip install ../implementation
+        working-directory: caller
+      - name: Initialize pre-commit tracking if needed
+        run: python -m precommit_updates validate
+        working-directory: caller
+      - name: Update configs and create PR
+        env:
+          RELEASE_INFO: ${{ needs.fetch-release-info.outputs.release_info }}
+          SKIPPED_UPDATES: ${{ needs.apply-cooldown.outputs.skipped_updates }}
+          GITHUB_TOKEN: ${{ github.token }}
+          BASE_BRANCH: ${{ github.event.pull_request.base.ref || github.event.repository.default_branch }}
+          FORCE_UPDATE: ${{ inputs.force_update || false }}
+          COOLDOWN_MAJOR: ${{ inputs.cooldown_major_days || '' }}
+          COOLDOWN_MINOR: ${{ inputs.cooldown_minor_days || '' }}
+          COOLDOWN_PATCH: ${{ inputs.cooldown_patch_days || '' }}
+        run: python -m precommit_updates apply
+        working-directory: caller
+
+  no-updates:
+    name: No Updates Available
+    needs: detect-updates
+    runs-on: ubuntu-latest
+    permissions: {} # This reporting job does not access the GitHub token.
+    if: needs.detect-updates.outputs.updates_found == 'false'
+    steps:
+      - name: Report no updates
+        run: |
+          echo '::notice title=Workflow complete::No pre-commit hook updates are available.'
+          {
+            echo '## Workflow complete'
+            echo
+            echo '> **No updates available**'
+            echo
+            echo 'No pull request was created.'
+          } >> "$GITHUB_STEP_SUMMARY"

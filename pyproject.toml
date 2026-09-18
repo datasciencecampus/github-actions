@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "precommit-updates"
+version = "0.1.0"
+description = "Testable automation for commit-pinned pre-commit hook updates"
+requires-python = ">=3.11"
+dependencies = [
+    "PyYAML==6.0.3",
+    "ruamel.yaml==0.19.1",
+]
+
+[project.scripts]
+precommit-updates = "precommit_updates.cli:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.4,<9",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

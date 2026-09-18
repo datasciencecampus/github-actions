@@ -260,3 +260,44 @@ Infrastructure-as-code and configuration security scanning using `checkov`.
 
 - `contents: read`
 - `security-events: write`
+
+---
+
+## auto-update-precommit-hooks
+
+Workflow file: `.github/workflows/auto-update-precommit-hooks.yml`
+
+Detects newer SemVer tags for pre-commit hooks in the caller repository, applies cooldown policy using caller configuration, and opens a pull request with the proposed updates.
+
+### Auto-Update Triggers
+
+- `workflow_call` (for reuse in other repositories)
+- `schedule` (weekly Tuesday 03:00 UTC in this repository)
+
+### Auto-Update Call Inputs (workflow_call only)
+
+- `cooldown_major_days`: optional string. Cooldown period for major version updates. Overrides `configs/precommit-updates-config.json`; built-in fallback is `"28"`.
+- `cooldown_minor_days`: optional string. Cooldown period for minor version updates. Overrides `configs/precommit-updates-config.json`; built-in fallback is `"14"`.
+- `cooldown_patch_days`: optional string. Cooldown period for patch version updates. Overrides `configs/precommit-updates-config.json`; built-in fallback is `"7"`.
+- `skip_hooks`: optional string. Comma-separated hook repository URLs to skip. Overrides `configs/precommit-updates-config.json` `hooks_to_skip` when provided.
+- `force_update`: optional boolean. Bypass cooldown periods and update all eligible hooks. Defaults to `false`.
+
+### Auto-Update Behavior
+
+1. Checks out the caller repository into `caller`.
+2. Checks out this repository into `implementation` at the invoked workflow SHA.
+3. Installs the Python implementation package from `implementation`.
+4. Runs detection, first-seen candidate persistence, cooldown filtering, release enrichment, and pull request creation from the `caller` workspace.
+
+### Auto-Update Notes
+
+- The caller repository must contain `.pre-commit-config.yaml`.
+- The tracking file defaults to `configs/precommit-update-tracking.json` in the caller repository and is initialized by the workflow if missing.
+- Candidate tag first-seen state is committed to the caller repository so cooldown windows can elapse across workflow runs.
+- Persistent defaults are read from `configs/precommit-updates-config.json` in the caller repository when present.
+- This workflow does not use the project-routing `implementation_ref` dispatch model.
+
+### Auto-Update `GITHUB_TOKEN` Permissions
+
+- `contents: write`
+- `pull-requests: write`

@@ -13,3 +13,4 @@ Background, rationale, and trade-offs.
 - [ADR-0003: Unified project_field_values input with optional field updates](ADR-0003-unified-project-field-values-input.md)
 - [ADR-0004: Separate reusable workflow pinning from dispatch ref](ADR-0004-separate-reusable-pinning-from-dispatch-ref.md)
 - [ADR-0005: Security workflow orchestration pattern](ADR-0005-security-workflow-orchestration.md)
+- [ADR-0006: Stateful pre-commit update automation](ADR-0006-stateful-precommit-update-automation.md)
