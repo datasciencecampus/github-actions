@@ -1,6 +1,7 @@
 import json
 
 from precommit_updates import cli
+from precommit_updates.github import GitHubQueryError
 
 
 def test_write_output_preserves_workflow_keys_and_json(tmp_path, monkeypatch):
@@ -15,6 +16,30 @@ def test_write_output_preserves_workflow_keys_and_json(tmp_path, monkeypatch):
     ]
 
 
+
+
+    def test_detect_command_reports_indeterminate_github_query(tmp_path, monkeypatch, capsys):
+        config = tmp_path / "pre-commit-config.yaml"
+        tracking = tmp_path / "tracking.json"
+        summary = tmp_path / "summary.md"
+        config.write_text("repos: []\n")
+        tracking.write_text('{"hooks": {}}')
+        monkeypatch.setenv("GITHUB_STEP_SUMMARY", str(summary))
+
+        def fail_detection(config_path, tracking_path, github):
+            raise GitHubQueryError("rate limit exceeded")
+
+        monkeypatch.setattr(cli, "detect_updates", fail_detection)
+
+        try:
+            cli.detect_command(type("Args", (), {"config": str(config), "tracking": str(tracking)})())
+        except SystemExit as error:
+            assert error.code == 1
+        else:
+            raise AssertionError("expected detection to fail")
+
+        assert "Detection indeterminate" in summary.read_text()
+        assert "rate limit exceeded" in capsys.readouterr().out
 def test_write_summary_appends_markdown(tmp_path, monkeypatch):
     summary = tmp_path / "summary"
     monkeypatch.setenv("GITHUB_STEP_SUMMARY", str(summary))

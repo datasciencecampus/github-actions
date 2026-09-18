@@ -12,6 +12,10 @@ CommandRunner = Callable[..., subprocess.CompletedProcess[str]]
 _REPOSITORY_PATTERN = re.compile(r"^https://github\.com/([^/]+)/([^/]+?)(?:\.git)?/?$")
 
 
+class GitHubQueryError(RuntimeError):
+    """Raised when a GitHub API query could not be completed reliably."""
+
+
 @dataclass(frozen=True)
 class GitHubRepository:
     """Parsed owner and repository name from a GitHub URL.
@@ -58,25 +62,37 @@ class GitHubClient:
         self._runner = runner or subprocess.run
         self._timeout = timeout
 
-    def _query(self, args: Sequence[str]) -> Optional[str]:
+    def _query(self, args: Sequence[str], *, missing_ok: bool = False) -> Optional[str]:
         """Run a read-only ``gh api`` query.
 
         Args:
             args: Arguments appended after ``gh api``.
+            missing_ok: Whether a GitHub 404 should be treated as absent data.
 
         Returns:
-            Stripped standard output, or ``None`` after a command failure or timeout.
+            Stripped standard output, or ``None`` when the requested data is absent.
+
+        Raises:
+            GitHubQueryError: If the query fails, times out, or ``gh`` cannot be run.
         """
+        command = ["gh", "api", *args]
         try:
             result = self._runner(
-                ["gh", "api", *args],
+                command,
                 capture_output=True,
                 text=True,
                 timeout=self._timeout,
             )
-        except (OSError, subprocess.TimeoutExpired):
-            return None
-        if result.returncode != 0 or not result.stdout.strip():
+        except subprocess.TimeoutExpired as error:
+            raise GitHubQueryError(f"GitHub API query timed out: {' '.join(command)}") from error
+        except OSError as error:
+            raise GitHubQueryError(f"GitHub API query failed to start: {error}") from error
+        if result.returncode != 0:
+            if missing_ok and _is_not_found(result):
+                return None
+            detail = (result.stderr or result.stdout or "unknown error").strip()
+            raise GitHubQueryError(f"GitHub API query failed: {detail}")
+        if not result.stdout.strip():
             return None
         return result.stdout.strip()
 
@@ -92,7 +108,7 @@ class GitHubClient:
         repository = parse_repository_url(repo_url)
         if not repository:
             return None
-        tag = self._query([f"repos/{repository.path}/releases/latest", "-q", ".tag_name"])
+        tag = self._query([f"repos/{repository.path}/releases/latest", "-q", ".tag_name"], missing_ok=True)
         if not tag:
             return None
         sha = self._query([f"repos/{repository.path}/commits/{tag}", "-q", ".sha"])
@@ -128,7 +144,7 @@ class GitHubClient:
         repository = parse_repository_url(repo_url)
         if not repository:
             return None
-        return self._query([f"repos/{repository.path}/releases/tags/{tag}", "-q", ".body"])
+        return self._query([f"repos/{repository.path}/releases/tags/{tag}", "-q", ".body"], missing_ok=True)
 
     def commit_messages(self, repo_url: str, old_sha: str, new_sha: str) -> list[str]:
         """Fetch up to ten commits in an inclusive GitHub comparison range.
@@ -147,3 +163,9 @@ class GitHubClient:
         comparison = f"repos/{repository.path}/compare/{old_sha}...{new_sha}"
         commits = self._query([comparison, "-q", ".commits[].sha"])
         return commits.splitlines()[:10] if commits else []
+
+
+def _is_not_found(result: subprocess.CompletedProcess[str]) -> bool:
+    """Return whether a failed ``gh api`` result is an expected GitHub 404."""
+    output = f"{result.stderr}\n{result.stdout}"
+    return "HTTP 404" in output or '"status":"404"' in output or '"status": "404"' in output

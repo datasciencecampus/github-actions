@@ -11,7 +11,7 @@ import subprocess
 from typing import Any
 
 from .detection import detect_updates
-from .github import GitHubClient
+from .github import GitHubClient, GitHubQueryError
 from .models import CooldownConfig
 from .mutation import apply_updates
 from .policy import filter_updates
@@ -70,7 +70,17 @@ def detect_command(args: argparse.Namespace) -> None:
     Args:
         args: Parsed CLI arguments containing config and tracking paths.
     """
-    updates = detect_updates(_path(args.config), _path(args.tracking), GitHubClient())
+    try:
+        updates = detect_updates(_path(args.config), _path(args.tracking), GitHubClient())
+    except GitHubQueryError as error:
+        print(f"ERROR: Pre-commit update detection is indeterminate: {error}")
+        _write_summary(
+            "## Pre-commit update check\n\n"
+            "> **Detection indeterminate**\n\n"
+            f"{error}\n\n"
+            "The workflow could not reliably query GitHub release data, so it did not treat hooks as current."
+        )
+        raise SystemExit(1) from error
     _write_output({"updates_found": "true" if updates else "false", "updates_json": updates})
     if not updates:
         _write_notice("No pre-commit updates", "All configured hooks are already current.")

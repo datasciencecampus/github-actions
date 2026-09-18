@@ -1,6 +1,9 @@
 from types import SimpleNamespace
+import subprocess
 
-from precommit_updates.github import GitHubClient, parse_repository_url
+import pytest
+
+from precommit_updates.github import GitHubClient, GitHubQueryError, parse_repository_url
 
 
 def test_parse_repository_url_accepts_git_suffix_and_rejects_other_hosts():
@@ -29,8 +32,32 @@ def test_commit_messages_use_compare_range():
     ]
 
 
-def test_failed_github_command_is_treated_as_missing_data():
+def test_release_not_found_is_treated_as_missing_data():
+    def runner(command, **kwargs):
+        return SimpleNamespace(returncode=1, stdout="", stderr="gh: Not Found (HTTP 404)")
+
+    assert GitHubClient(runner=runner).latest_release("https://github.com/example/hook") is None
+
+
+def test_failed_github_command_raises_query_error():
     def runner(command, **kwargs):
         return SimpleNamespace(returncode=1, stdout="", stderr="failure")
 
-    assert GitHubClient(runner=runner).latest_release("https://github.com/example/hook") is None
+    with pytest.raises(GitHubQueryError, match="failure"):
+        GitHubClient(runner=runner).latest_release("https://github.com/example/hook")
+
+
+def test_timed_out_github_command_raises_query_error():
+    def runner(command, **kwargs):
+        raise subprocess.TimeoutExpired(command, timeout=10)
+
+    with pytest.raises(GitHubQueryError, match="timed out"):
+        GitHubClient(runner=runner).latest_release("https://github.com/example/hook")
+
+
+def test_missing_gh_raises_query_error():
+    def runner(command, **kwargs):
+        raise FileNotFoundError("gh")
+
+    with pytest.raises(GitHubQueryError, match="failed to start"):
+        GitHubClient(runner=runner).latest_release("https://github.com/example/hook")
