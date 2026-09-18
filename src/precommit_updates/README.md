@@ -30,7 +30,8 @@ Each stage accepts optional paths:
 ```shell
 PYTHONPATH=src python3 -m precommit_updates detect \
   --config .pre-commit-config.yaml \
-  --tracking configs/precommit-update-tracking.json
+  --tracking configs/precommit-update-tracking.json \
+  --settings configs/precommit-updates-config.json
 ```
 
 ## Workflow contracts
@@ -40,8 +41,12 @@ The CLI reads and writes the following GitHub Actions environment values:
 - `UPDATES_JSON` for the cooldown stage
 - `ELIGIBLE_JSON` for the release-info stage
 - `RELEASE_INFO` and `SKIPPED_UPDATES` for the apply stage
-- `COOLDOWN_MAJOR`, `COOLDOWN_MINOR`, and `COOLDOWN_PATCH`
-- `FORCE_UPDATE` and `SKIP_HOOKS`
+- `COOLDOWN_MAJOR`, `COOLDOWN_MINOR`, and `COOLDOWN_PATCH` as explicit overrides for `configs/precommit-updates-config.json`
+- `FORCE_UPDATE` and `SKIP_HOOKS`, where `SKIP_HOOKS` overrides the persistent skip list when set
+
+The `cooldown` and `apply` stages read `configs/precommit-updates-config.json`
+by default. Missing keys fall back to built-in defaults, and invalid settings fail
+the stage rather than silently ignoring the file.
 
 When `GITHUB_OUTPUT` is set, stage output is written using the existing workflow
 keys: `updates_found`, `updates_json`, `eligible_updates`, `skipped_updates`,

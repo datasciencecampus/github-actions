@@ -6,22 +6,18 @@ on:
       cooldown_major_days:
         description: "Cooldown period for major version updates (days)"
         required: false
-        default: "28"
         type: string
       cooldown_minor_days:
         description: "Cooldown period for minor version updates (days)"
         required: false
-        default: "14"
         type: string
       cooldown_patch_days:
         description: "Cooldown period for patch version updates (days)"
         required: false
-        default: "7"
         type: string
       skip_hooks:
         description: "Comma-separated list of hook repo URLs to skip (e.g., https://github.com/owner/repo)"
         required: false
-        default: ""
         type: string
       force_update:
         description: "Bypass cooldown periods and update all eligible hooks"
@@ -114,9 +110,9 @@ jobs:
           UPDATES_JSON: ${{ needs.detect-updates.outputs.updates_json }}
           FORCE_UPDATE: ${{ inputs.force_update || false }}
           SKIP_HOOKS: ${{ inputs.skip_hooks || '' }}
-          COOLDOWN_MAJOR: ${{ inputs.cooldown_major_days || '28' }}
-          COOLDOWN_MINOR: ${{ inputs.cooldown_minor_days || '14' }}
-          COOLDOWN_PATCH: ${{ inputs.cooldown_patch_days || '7' }}
+          COOLDOWN_MAJOR: ${{ inputs.cooldown_major_days || '' }}
+          COOLDOWN_MINOR: ${{ inputs.cooldown_minor_days || '' }}
+          COOLDOWN_PATCH: ${{ inputs.cooldown_patch_days || '' }}
         run: python -m precommit_updates cooldown
         working-directory: caller
 
@@ -195,9 +191,9 @@ jobs:
           SKIPPED_UPDATES: ${{ needs.apply-cooldown.outputs.skipped_updates }}
           GITHUB_TOKEN: ${{ github.token }}
           FORCE_UPDATE: ${{ inputs.force_update || false }}
-          COOLDOWN_MAJOR: ${{ inputs.cooldown_major_days || '28' }}
-          COOLDOWN_MINOR: ${{ inputs.cooldown_minor_days || '14' }}
-          COOLDOWN_PATCH: ${{ inputs.cooldown_patch_days || '7' }}
+          COOLDOWN_MAJOR: ${{ inputs.cooldown_major_days || '' }}
+          COOLDOWN_MINOR: ${{ inputs.cooldown_minor_days || '' }}
+          COOLDOWN_PATCH: ${{ inputs.cooldown_patch_days || '' }}
         run: python -m precommit_updates apply
         working-directory: caller
 

@@ -206,14 +206,14 @@ This means all pre-commit hooks are on their latest versions, or all available u
 Possible reasons:
 1. **Cooldown period active**: Check the workflow summary to see how recently the candidate release was published
 2. **Hook is in skip list**: Check `skip_hooks` input or `configs/precommit-updates-config.json`
-3. **No releases available**: The upstream repository may not use GitHub releases. The workflow falls back to checking commits.
+3. **No releases available**: The upstream repository may not use GitHub releases, so the workflow has no tagged release to evaluate.
 
 To force an update:
 - Call the workflow with `force_update: true`
 
-### Workflow Fails with "Could Not Fetch Latest Release"
+### Workflow Fails While Fetching Release Data
 
-The workflow falls back to fetching the latest commit if GitHub releases are unavailable. This is normal and the workflow should still complete successfully.
+API errors, rate limits, missing `gh`, and timeouts make detection indeterminate. The workflow fails instead of reporting hooks as current when it cannot reliably query release data.
 
 ## Advanced: Manual Configuration
 

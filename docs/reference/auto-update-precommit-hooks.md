@@ -18,7 +18,7 @@ Complete reference for the auto-update pre-commit hooks workflow.
 **Description**: Cooldown period (in days) before updating pre-commit hooks to a new major version.
 
 **Type**: `string`  
-**Default**: `"28"`  
+**Default**: `configs/precommit-updates-config.json` value, or `"28"` if unset
 **Required**: No  
 **Example**: `"14"` to reduce from 28 to 14 days
 
@@ -31,7 +31,7 @@ Complete reference for the auto-update pre-commit hooks workflow.
 **Description**: Cooldown period (in days) before updating pre-commit hooks to a new minor version.
 
 **Type**: `string`  
-**Default**: `"14"`  
+**Default**: `configs/precommit-updates-config.json` value, or `"14"` if unset
 **Required**: No  
 **Example**: `"7"` to reduce from 14 to 7 days
 
@@ -44,7 +44,7 @@ Complete reference for the auto-update pre-commit hooks workflow.
 **Description**: Cooldown period (in days) before updating pre-commit hooks to a new patch version.
 
 **Type**: `string`  
-**Default**: `"7"`  
+**Default**: `configs/precommit-updates-config.json` value, or `"7"` if unset
 **Required**: No  
 **Example**: `"3"` to reduce from 7 to 3 days
 
@@ -57,7 +57,7 @@ Complete reference for the auto-update pre-commit hooks workflow.
 **Description**: Comma-separated list of pre-commit hook repository URLs to skip during this run.
 
 **Type**: `string`  
-**Default**: `""` (empty string; no hooks skipped)  
+**Default**: `configs/precommit-updates-config.json` `hooks_to_skip` value, or no hooks if unset
 **Required**: No  
 **Example**: `"https://github.com/zizmorcore/zizmor-pre-commit,https://github.com/other/hook"`
 
@@ -207,11 +207,11 @@ Complete reference for the auto-update pre-commit hooks workflow.
 - `cooldown_days.minor`: Default cooldown period for minor version updates (days)
 - `cooldown_days.patch`: Default cooldown period for patch version updates (days)
 - `hooks_to_skip`: Array of hook repository URLs to exclude from auto-updates
-- `enable_auto_updates`: Global flag to enable/disable auto-updates (currently informational; not enforced by workflow)
+- `enable_auto_updates`: Global flag to enable/disable auto-updates
 
-**Precedence**: Workflow input parameters override these defaults when provided. Cooldown periods are measured from the candidate release publication timestamp.
+**Precedence**: Workflow input parameters override file defaults when provided. Cooldown periods are measured from the candidate release publication timestamp.
 
-**Manual editing**: You can edit this file directly to change defaults or add hooks to the skip list.
+**Manual editing**: You can edit this file directly to change defaults, add hooks to the persistent skip list, or disable automatic updates.
 
 ---
 

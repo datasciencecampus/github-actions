@@ -20,6 +20,13 @@ from .release_info import enrich_updates
 from .validation import alignment_errors, initialize_tracking
 
 
+DEFAULT_UPDATE_SETTINGS: dict[str, Any] = {
+    "cooldown_days": {"major": 28, "minor": 14, "patch": 7},
+    "hooks_to_skip": [],
+    "enable_auto_updates": True,
+}
+
+
 def _write_output(values: dict[str, Any]) -> None:
     """Write step outputs to ``GITHUB_OUTPUT`` or standard output.
 
@@ -62,6 +69,65 @@ def _path(value: str) -> Path:
         Expanded path object.
     """
     return Path(value).expanduser()
+
+
+def _load_update_settings(path: Path) -> dict[str, Any]:
+    """Load persistent update settings with secure built-in defaults."""
+    settings = {
+        "cooldown_days": dict(DEFAULT_UPDATE_SETTINGS["cooldown_days"]),
+        "hooks_to_skip": list(DEFAULT_UPDATE_SETTINGS["hooks_to_skip"]),
+        "enable_auto_updates": DEFAULT_UPDATE_SETTINGS["enable_auto_updates"],
+    }
+    if not path.exists():
+        return settings
+
+    loaded = json.loads(path.read_text())
+    if not isinstance(loaded, dict):
+        raise ValueError("update settings must be a JSON object")
+
+    cooldown_days = loaded.get("cooldown_days")
+    if cooldown_days is not None:
+        if not isinstance(cooldown_days, dict):
+            raise ValueError("cooldown_days must be a JSON object")
+        settings["cooldown_days"].update(cooldown_days)
+
+    hooks_to_skip = loaded.get("hooks_to_skip")
+    if hooks_to_skip is not None:
+        if not isinstance(hooks_to_skip, list) or not all(isinstance(item, str) for item in hooks_to_skip):
+            raise ValueError("hooks_to_skip must be a list of strings")
+        settings["hooks_to_skip"] = hooks_to_skip
+
+    enable_auto_updates = loaded.get("enable_auto_updates")
+    if enable_auto_updates is not None:
+        if not isinstance(enable_auto_updates, bool):
+            raise ValueError("enable_auto_updates must be a boolean")
+        settings["enable_auto_updates"] = enable_auto_updates
+
+    return settings
+
+
+def _env_int(name: str, fallback: int) -> int:
+    """Return an integer environment override or a fallback value."""
+    value = os.environ.get(name)
+    return int(value) if value not in (None, "") else fallback
+
+
+def _effective_cooldown(settings: dict[str, Any]) -> CooldownConfig:
+    """Combine persistent cooldown settings with explicit workflow overrides."""
+    configured = settings["cooldown_days"]
+    return CooldownConfig(
+        major=_env_int("COOLDOWN_MAJOR", int(configured["major"])),
+        minor=_env_int("COOLDOWN_MINOR", int(configured["minor"])),
+        patch=_env_int("COOLDOWN_PATCH", int(configured["patch"])),
+    )
+
+
+def _effective_skip_hooks(settings: dict[str, Any]) -> list[str]:
+    """Combine persistent skip hooks with explicit workflow overrides."""
+    override = os.environ.get("SKIP_HOOKS")
+    if override not in (None, ""):
+        return [item.strip() for item in override.split(",") if item.strip()]
+    return [item.strip() for item in settings["hooks_to_skip"] if item.strip()]
 
 
 def detect_command(args: argparse.Namespace) -> None:
@@ -112,12 +178,21 @@ def cooldown_command(args: argparse.Namespace) -> None:
     updates = json.loads(os.environ.get("UPDATES_JSON", "[]"))
     tracking_path = _path(args.tracking)
     tracking = json.loads(tracking_path.read_text()) if tracking_path.exists() else {"hooks": {}}
-    cooldown = CooldownConfig(
-        major=int(os.environ.get("COOLDOWN_MAJOR", "28")),
-        minor=int(os.environ.get("COOLDOWN_MINOR", "14")),
-        patch=int(os.environ.get("COOLDOWN_PATCH", "7")),
-    )
-    skip_hooks = [item.strip() for item in os.environ.get("SKIP_HOOKS", "").split(",") if item.strip()]
+    settings = _load_update_settings(_path(args.settings))
+    if not settings["enable_auto_updates"]:
+        skipped = [{**update, "reason": "Auto updates disabled in configuration"} for update in updates]
+        _write_output({"eligible_updates": [], "skipped_updates": skipped})
+        _write_notice("Auto updates disabled", "configs/precommit-updates-config.json disables auto updates.")
+        _write_summary(
+            "## Cooldown filter\n\n"
+            f"| Result | Count |\n| --- | ---: |\n| Eligible | 0 |\n| Skipped | {len(skipped)} |\n\n"
+            "> **Auto updates disabled**\n\n"
+            "The workflow stopped before release enrichment and pull request creation."
+        )
+        return
+
+    cooldown = _effective_cooldown(settings)
+    skip_hooks = _effective_skip_hooks(settings)
     eligible, skipped = filter_updates(
         updates,
         tracking,
@@ -170,11 +245,7 @@ def apply_command(args: argparse.Namespace) -> None:
         print("No updates to apply")
         return
 
-    cooldown = {
-        "major": int(os.environ.get("COOLDOWN_MAJOR", "28")),
-        "minor": int(os.environ.get("COOLDOWN_MINOR", "14")),
-        "patch": int(os.environ.get("COOLDOWN_PATCH", "7")),
-    }
+    cooldown = _effective_cooldown(_load_update_settings(_path(args.settings))).as_dict()
     body = generate_pr_body(
         release_info,
         skipped,
@@ -265,6 +336,7 @@ def _parser() -> argparse.ArgumentParser:
         subparser = subparsers.add_parser(name)
         subparser.add_argument("--config", default=".pre-commit-config.yaml")
         subparser.add_argument("--tracking", default="configs/precommit-update-tracking.json")
+        subparser.add_argument("--settings", default="configs/precommit-updates-config.json")
         subparser.set_defaults(handler=globals()[f"{name.replace('-', '_')}_command"])
     return parser
 
