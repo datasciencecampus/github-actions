@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import html
 import re
 from datetime import datetime, timezone
 from typing import Any
@@ -61,7 +62,16 @@ def generate_pr_body(
             lines.extend(["```", "", f"[View commit history]({update['repo']}/compare/{update['old_sha'][:7]}...{update['new_sha'][:7]})", "", "</details>", ""])
         notes = update.get("release_notes", "(No release notes)")
         if notes and notes != "(No release notes available)":
-            lines.extend(["<details><summary>Release Notes</summary>", "", notes, "", "</details>", ""])
+            lines.extend(
+                [
+                    "<details><summary>Release Notes</summary>",
+                    "",
+                    html.escape(notes, quote=False),
+                    "",
+                    "</details>",
+                    "",
+                ]
+            )
 
     lines.extend(["---", "", "## Risks & Notes", ""])
     if any(update.get("semver_level") == "major" for update in updates):
