@@ -220,6 +220,7 @@ jobs:
           RELEASE_INFO: ${{ needs.fetch-release-info.outputs.release_info }}
           SKIPPED_UPDATES: ${{ needs.apply-cooldown.outputs.skipped_updates }}
           GITHUB_TOKEN: ${{ github.token }}
+          BASE_BRANCH: ${{ github.event.pull_request.base.ref || github.event.repository.default_branch }}
           FORCE_UPDATE: ${{ inputs.force_update || false }}
           COOLDOWN_MAJOR: ${{ inputs.cooldown_major_days || '' }}
           COOLDOWN_MINOR: ${{ inputs.cooldown_minor_days || '' }}

@@ -317,7 +317,7 @@ def apply_command(args: argparse.Namespace) -> None:
             "pr",
             "create",
             "--base",
-            "main",
+            os.environ.get("BASE_BRANCH", "main"),
             "--head",
             branch,
             "--title",
