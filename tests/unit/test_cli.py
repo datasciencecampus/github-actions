@@ -40,6 +40,35 @@ def test_detect_command_reports_indeterminate_github_query(tmp_path, monkeypatch
     assert "rate limit exceeded" in capsys.readouterr().out
 
 
+def test_detect_command_skips_detection_when_auto_updates_are_disabled(tmp_path, monkeypatch, capsys):
+    config = tmp_path / "pre-commit-config.yaml"
+    tracking = tmp_path / "tracking.json"
+    settings = tmp_path / "settings.json"
+    output = tmp_path / "github-output"
+    summary = tmp_path / "summary.md"
+    config.write_text("repos: []\n")
+    tracking.write_text('{"hooks": {}}')
+    settings.write_text('{"enable_auto_updates": false}')
+    monkeypatch.setenv("GITHUB_OUTPUT", str(output))
+    monkeypatch.setenv("GITHUB_STEP_SUMMARY", str(summary))
+
+    def fail_detection(config_path, tracking_path, github):
+        raise AssertionError("detection should be skipped")
+
+    monkeypatch.setattr(cli, "detect_updates", fail_detection)
+
+    cli.detect_command(
+        type("Args", (), {"config": str(config), "tracking": str(tracking), "settings": str(settings)})()
+    )
+
+    values = dict(line.split("=", 1) for line in output.read_text().splitlines())
+    assert values["auto_updates_enabled"] == "false"
+    assert values["updates_found"] == "false"
+    assert json.loads(values["updates_json"]) == []
+    assert "detection and tracking-state mutation" in summary.read_text()
+    assert "Auto updates disabled" in capsys.readouterr().out
+
+
 def test_write_summary_appends_markdown(tmp_path, monkeypatch):
     summary = tmp_path / "summary"
     monkeypatch.setenv("GITHUB_STEP_SUMMARY", str(summary))

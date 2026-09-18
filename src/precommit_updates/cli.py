@@ -134,8 +134,20 @@ def detect_command(args: argparse.Namespace) -> None:
     """Run the update-detection workflow stage.
 
     Args:
-        args: Parsed CLI arguments containing config and tracking paths.
+        args: Parsed CLI arguments containing config, tracking, and settings paths.
     """
+    settings = _load_update_settings(_path(getattr(args, "settings", "configs/precommit-updates-config.json")))
+    if not settings["enable_auto_updates"]:
+        _write_output({"auto_updates_enabled": "false", "updates_found": "false", "updates_json": []})
+        _write_notice("Auto updates disabled", "configs/precommit-updates-config.json disables auto updates.")
+        _write_summary(
+            "## Pre-commit update check\n\n"
+            "> **Auto updates disabled**\n\n"
+            "The workflow skipped update detection and tracking-state mutation."
+        )
+        return
+
+    _write_output({"auto_updates_enabled": "true"})
     try:
         updates = detect_updates(_path(args.config), _path(args.tracking), GitHubClient())
     except GitHubQueryError as error:

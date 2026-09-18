@@ -41,6 +41,7 @@ jobs:
     permissions: # Each job receives only the repository access required for its stage.
       contents: write # Required to inspect the pre-commit configuration and persist first-seen candidate state.
     outputs:
+      auto_updates_enabled: ${{ steps.detect.outputs.auto_updates_enabled }}
       updates_found: ${{ steps.detect.outputs.updates_found }}
       updates_json: ${{ steps.detect.outputs.updates_json }}
     steps:
@@ -77,6 +78,7 @@ jobs:
         run: python -m precommit_updates detect
         working-directory: caller
       - name: Persist first-seen candidate state
+        if: steps.detect.outputs.auto_updates_enabled == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           BRANCH_NAME: ${{ github.ref_name }}
