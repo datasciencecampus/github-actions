@@ -116,9 +116,9 @@ def _effective_cooldown(settings: dict[str, Any]) -> CooldownConfig:
     """Combine persistent cooldown settings with explicit workflow overrides."""
     configured = settings["cooldown_days"]
     return CooldownConfig(
-        major=_env_int("COOLDOWN_MAJOR", int(configured["major"])),
-        minor=_env_int("COOLDOWN_MINOR", int(configured["minor"])),
-        patch=_env_int("COOLDOWN_PATCH", int(configured["patch"])),
+        major=_env_int("COOLDOWN_MAJOR", configured["major"]),
+        minor=_env_int("COOLDOWN_MINOR", configured["minor"]),
+        patch=_env_int("COOLDOWN_PATCH", configured["patch"]),
     )
 
 

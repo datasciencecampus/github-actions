@@ -1,5 +1,7 @@
 import json
 
+import pytest
+
 from precommit_updates import cli
 from precommit_updates.github import GitHubQueryError
 
@@ -131,6 +133,14 @@ def test_cooldown_command_environment_overrides_settings_file(tmp_path, monkeypa
     values = dict(line.split("=", 1) for line in output.read_text().splitlines())
     assert json.loads(values["eligible_updates"])[0]["repo"] == "example"
     assert json.loads(values["skipped_updates"]) == []
+
+
+@pytest.mark.parametrize("invalid_value", [0.9, True])
+def test_effective_cooldown_rejects_non_integer_settings(invalid_value):
+    settings = {"cooldown_days": {"major": 28, "minor": 14, "patch": invalid_value}}
+
+    with pytest.raises(ValueError, match="cooldown periods must be integers"):
+        cli._effective_cooldown(settings)
 
 
 def test_cooldown_command_reads_persistent_skip_list(tmp_path, monkeypatch):
