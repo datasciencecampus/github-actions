@@ -218,7 +218,7 @@ Complete reference for the auto-update pre-commit hooks workflow.
 - `cooldown_days.minor`: Default cooldown period for minor version updates (days)
 - `cooldown_days.patch`: Default cooldown period for patch version updates (days)
 - `hooks_to_skip`: Array of hook repository URLs to exclude from auto-updates
-- `enable_auto_updates`: Global flag to enable/disable auto-updates
+- `enable_auto_updates`: Global flag to enable/disable auto-updates. When `false`, detection stops before querying upstream tags or mutating candidate state, and no tracking-state commit is created.
 
 **Precedence**: Workflow input parameters override file defaults when provided. Cooldown periods are measured from the candidate tag's first-seen timestamp.
 
@@ -291,9 +291,11 @@ The following updates are available but skipped...
 3. Applies cooldown filters (respecting input overrides)
 4. Fetches release notes and commit history
 5. Updates `.pre-commit-config.yaml` and `precommit-update-tracking.json`
-6. Creates a PR on the `main` branch from a feature branch
+6. Creates a PR from a feature branch to the caller's pull-request base branch or default branch
 
-**Branch naming**: `chore/precommit-updates-{YYYYMMDD}`
+**Branch naming**: `chore/precommit-updates-{GITHUB_RUN_ID}-{GITHUB_RUN_ATTEMPT}`
+
+The workflow uses pinned `setup-uv` v10.1.0 to install uv 0.12.3 and managed Python 3.13.
 
 **PR title**: `chore(pre-commit): auto-update hooks ({N} update(s))`
 
@@ -330,11 +332,11 @@ If the workflow cannot parse comparable semantic versions, it skips the candidat
 
 | Scenario | Behavior |
 |----------|----------|
-| No updates found | Job `no-updates` runs; logs message and exits successfully |
+| No comparable updates found | Job `no-updates` runs; the summary explains that hooks may be current, unsupported, or unresolved, and exits successfully |
 | GitHub API limit exceeded | Workflow fails as indeterminate rather than reporting hooks as current |
 | Candidate first-seen timestamp missing or invalid | Update is skipped because cooldown age cannot be established |
 | Release notes unavailable | Logs "(No release notes available)"; PR still created |
-| Commit history fetch fails | Uses short commit SHAs; PR still created |
+| Commit history fetch fails | Omits the commit list and count; the PR still includes the update's short SHAs |
 | PR creation fails | Workflow fails with error message; manual PR creation may be needed |
 | Concurrent runs (race condition) | Later run may have git push conflicts; manual intervention needed |
 
@@ -352,12 +354,12 @@ If the workflow cannot parse comparable semantic versions, it skips the candidat
 
 ## Frequently Asked Questions
 
-### Q: Why does the workflow show "No updates found" even though I see a new release?
+### Q: Why does the workflow show "No comparable updates" even though I see a new release?
 
 **A**: Possible reasons:
 1. The candidate tag was first seen less than the configured cooldown period ago
 2. The hook is in the `hooks_to_skip` list
-3. The upstream repository does not publish comparable SemVer tags
+3. The upstream repository does not publish comparable SemVer tags, or the configured SHA cannot be resolved to one
 
 Check the workflow summary for skipped updates and cooldown remaining time.
 

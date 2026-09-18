@@ -122,7 +122,7 @@ v1.2.3 → v2.0.0
 </details>
 ```
 
-The **Commits** section (collapsible) shows up to ten commits between the old and new versions, while the heading count reflects GitHub's full comparison total. Click to expand.
+The **Commits** section (collapsible) shows up to ten commits between the old and new versions, while the heading count reflects GitHub's full comparison total. If comparison data is unavailable, the PR is still created with the update's short SHAs. Click to expand.
 
 The **Release Notes** section (collapsible) shows the upstream release notes. Click to expand.
 
@@ -169,6 +169,8 @@ Tracks the current SHA, version, local adoption timestamps, and first-seen candi
 
 Cooldowns are based on the candidate tag's first-seen timestamp, so editing local adoption timestamps does not reset the waiting period.
 
+If the tracking file or its parent directory does not exist, the workflow creates them during first-time initialization.
+
 ### `configs/precommit-updates-config.json`
 
 Stores default configuration for the workflow:
@@ -187,6 +189,8 @@ Stores default configuration for the workflow:
 
 **Note**: Workflow input parameters take precedence over this file.
 
+Set `enable_auto_updates` to `false` to skip upstream detection and candidate-state persistence for the run.
+
 ## Reviewing and Merging Updates
 
 1. When a PR is created by the workflow, review the changes:
@@ -203,9 +207,9 @@ Stores default configuration for the workflow:
 
 ## Troubleshooting
 
-### Workflow Run Shows "No Updates Found"
+### Workflow Run Shows "No Comparable Updates"
 
-This means all pre-commit hooks are on their latest versions, or all available updates are still in cooldown periods. This is expected behavior.
+This means no comparable SemVer updates were detected. Hooks may already be current, still be in cooldown, use unsupported tag formats, or have a current SHA that cannot be resolved to a comparable tag. This is expected behavior.
 
 ### A Specific Hook Never Updates
 
