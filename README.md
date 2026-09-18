@@ -6,13 +6,14 @@ This repository contains workflows that depend on `datasciencecampus` organizati
 
 ## Overview
 
-This repository currently provides three public reusable workflows:
+This repository currently provides four public reusable workflows:
 
 - `add-issue-to-projects`: add new issues to one or more `datasciencecampus` ProjectsV2 boards.
 - `add-pr-to-projects`: add new pull requests to one or more `datasciencecampus` ProjectsV2 boards and set configured field values.
 - `security-analysis`: scan GitHub Actions workflows and infrastructure-as-code for security issues using zizmor and checkov.
+- `auto-update-precommit-hooks`: detect pre-commit hook releases, apply cooldown policy, and create reviewable update pull requests.
 
-Each public reusable workflow has a matching internal implementation workflow. The public workflow is the caller-facing contract; the internal workflow owns the privileged `workflow_dispatch` path and project mutation logic.
+The project-routing workflows have matching internal implementation workflows. Their public workflows are the caller-facing contract; the internal workflows own the privileged `workflow_dispatch` path and project mutation logic.
 
 ## Workflow Catalog
 
@@ -43,12 +44,20 @@ Adds opened pull requests to `datasciencecampus` Projects and sets configured fi
 - How-to guide: [docs/how-to/use-add-pr-to-projects-workflow.md](docs/how-to/use-add-pr-to-projects-workflow.md)
 - Reusable workflow test: [.github/workflows/test-add-pr-to-projects-reusable.yml](.github/workflows/test-add-pr-to-projects-reusable.yml) (manual or `pull_request.opened`/`pull_request.reopened`; requires repository variable `PROJECT_NUMBER` unless manual inputs are supplied)
 
+### `auto-update-precommit-hooks`
+
+Detects tagged releases for pre-commit hooks, applies semver cooldown policy, updates `.pre-commit-config.yaml` and tracking state, and opens a pull request for review.
+
+- Public reusable workflow: [.github/workflows/auto-update-precommit-hooks.yml](.github/workflows/auto-update-precommit-hooks.yml)
+- How-to guide: [docs/how-to/use-auto-update-precommit-hooks-workflow.md](docs/how-to/use-auto-update-precommit-hooks-workflow.md)
+- Reference: [docs/reference/auto-update-precommit-hooks.md](docs/reference/auto-update-precommit-hooks.md)
+
 ## Consumption Model
 
 Consumers should call the public reusable workflows from other repositories using `uses:`.
 
-- By default, the reusable workflows dispatch the release tag recorded in metadata stored alongside the invoked workflow revision.
-- Set `implementation_ref` only when you need to override that release-managed dispatch target with a specific branch or tag.
+- By default, the project-routing reusable workflows dispatch the release tag recorded in metadata stored alongside the invoked workflow revision.
+- Set `implementation_ref` only when you need to override that release-managed dispatch target with a specific branch or tag for a project-routing workflow.
 
 > [!IMPORTANT]
 > Public repositories that trigger these workflows automatically from issue or pull request creation events must restrict those events to trusted actors, for example by allowing only collaborators to open issues or pull requests. Configure this in the caller repository at `https://github.com/<owner>/<repo>/settings` under `Settings > General > Features`, then use `Issues > Issue permissions` or `Pull requests > Pull request permissions` as appropriate.

@@ -7,11 +7,11 @@ Complete reference for the auto-update pre-commit hooks workflow.
 | Property | Value |
 |----------|-------|
 | **Workflow file** | `.github/workflows/auto-update-precommit-hooks.yml` |
-| **Type** | Standalone workflow (not reusable) |
-| **Triggers** | `workflow_dispatch` (manual), `schedule` (weekly Tuesday 03:00 UTC) |
+| **Type** | Reusable workflow |
+| **Triggers** | `workflow_call`, `schedule` (weekly Tuesday 03:00 UTC) |
 | **Permissions** | `contents: write`, `pull-requests: write` |
 
-## Inputs (workflow_dispatch only)
+## Inputs (workflow_call only)
 
 ### `cooldown_major_days`
 
@@ -272,7 +272,7 @@ The following updates are available but skipped...
 
 ## Behavior by Event
 
-### `workflow_dispatch` (Manual Trigger)
+### `workflow_call` (Reusable Workflow)
 
 1. Detects available updates
 2. Applies cooldown filters (respecting input overrides)
@@ -363,7 +363,7 @@ Check `configs/precommit-update-tracking.json` for the last update timestamp per
 "hooks_to_skip": ["https://github.com/zizmorcore/zizmor-pre-commit"]
 ```
 
-Or pass `skip_hooks` during manual trigger.
+Or pass `skip_hooks` from the calling workflow.
 
 ---
 

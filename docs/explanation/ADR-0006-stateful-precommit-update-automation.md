@@ -20,6 +20,8 @@ Implement the automation as a stateful, staged workflow in `auto-update-precommi
 
 The workflow uses `contents: read` for detection, filtering, and release-context jobs. Only the final job receives `contents: write` and `pull-requests: write`. Actions use pinned commit SHAs, checkout does not persist credentials, and the GitHub token is passed only to the steps that need it.
 
+When the workflow is called as a reusable workflow, each Python job checks out the caller repository into a `caller` workspace and checks out this repository into a separate `implementation` workspace at the invoked workflow SHA. The Python package is installed from `implementation`, while detection, tracking validation, configuration mutation, git commits, and pull request creation run from `caller`.
+
 ## Rationale
 
 1. **Release trust and reproducibility**

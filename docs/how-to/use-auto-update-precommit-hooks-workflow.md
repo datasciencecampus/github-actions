@@ -8,31 +8,43 @@ The auto-update workflow:
 - Detects new releases for pre-commit hooks defined in `.pre-commit-config.yaml`
 - Applies semver-based cooldown periods to prevent overly frequent updates
 - Creates informative pull requests with release summaries and risk assessments
-- Can run on a schedule or be triggered manually
+- Can run on a schedule or be called from another workflow
 
 ## Quick Start
 
 ### Automatic Scheduled Updates
 
-The workflow runs automatically every Tuesday at 03:00 UTC. No action needed.
+Add a scheduled caller workflow to run the reusable workflow automatically, for example every Tuesday at 03:00 UTC.
 
 To view scheduled runs, navigate to:
 ```
 GitHub Repository → Actions → Auto-Update Pre-Commit Hooks
 ```
 
-### Manual Trigger
+### Reusable Workflow Trigger
 
-To manually trigger the workflow:
+To call the workflow from another repository:
 
-1. Go to **Actions** tab in your GitHub repository
-2. Select **Auto-Update Pre-Commit Hooks** workflow
-3. Click **Run workflow**
-4. Choose your options (see below) and click **Run workflow**
+```yaml
+name: Auto-Update Pre-Commit Hooks
+
+on:
+  schedule:
+    - cron: "0 3 * * 2"
+
+permissions: {}
+
+jobs:
+  update-precommit-hooks:
+    permissions:
+      contents: write
+      pull-requests: write
+    uses: datasciencecampus/github-actions/.github/workflows/auto-update-precommit-hooks.yml@<commit-sha>
+```
 
 ## Workflow Options
 
-When manually triggering with `workflow_dispatch`, you can customize the behavior:
+When calling with `workflow_call`, you can customize the behavior:
 
 ### Cooldown Periods
 
@@ -44,21 +56,29 @@ The workflow respects semver-based cooldown periods to balance freshness with st
 | **Minor** | 14 days | New features; moderate risk of breaking changes |
 | **Patch** | 7 days | Bug fixes; low risk, important for security |
 
-To override cooldown periods in a manual run:
+To override cooldown periods in a caller workflow:
 
-1. In the **Run workflow** dialog:
-   - Set **Cooldown period for major version updates (days)**: e.g., `14` to reduce from default 28
-   - Set **Cooldown period for minor version updates (days)**: e.g., `7`
-   - Set **Cooldown period for patch version updates (days)**: e.g., `3`
-
-2. Click **Run workflow**
+```yaml
+jobs:
+  update-precommit-hooks:
+    permissions:
+      contents: write
+      pull-requests: write
+    uses: datasciencecampus/github-actions/.github/workflows/auto-update-precommit-hooks.yml@<commit-sha>
+    with:
+      cooldown_major_days: "14"
+      cooldown_minor_days: "7"
+      cooldown_patch_days: "3"
+```
 
 ### Force Update
 
 To bypass all cooldown periods and update all eligible hooks immediately:
 
-1. In the **Run workflow** dialog, enable **Bypass cooldown periods and update all eligible hooks**
-2. Click **Run workflow**
+```yaml
+with:
+  force_update: true
+```
 
 **⚠️ Use with caution**: Bypassing cooldown periods increases exposure to supply chain attacks.
 
@@ -66,9 +86,10 @@ To bypass all cooldown periods and update all eligible hooks immediately:
 
 To exclude specific pre-commit hooks from being updated:
 
-1. In the **Run workflow** dialog, set **Comma-separated list of hook repo URLs to skip**
-   - Example: `https://github.com/zizmorcore/zizmor-pre-commit,https://github.com/other/hook`
-2. Click **Run workflow**
+```yaml
+with:
+  skip_hooks: "https://github.com/zizmorcore/zizmor-pre-commit,https://github.com/other/hook"
+```
 
 ## Understanding the Pull Request
 
@@ -188,7 +209,7 @@ Possible reasons:
 3. **No releases available**: The upstream repository may not use GitHub releases. The workflow falls back to checking commits.
 
 To force an update:
-- Manually trigger the workflow with **Bypass cooldown periods and update all eligible hooks** enabled
+- Call the workflow with `force_update: true`
 
 ### Workflow Fails with "Could Not Fetch Latest Release"
 
@@ -220,7 +241,7 @@ Edit `configs/precommit-update-tracking.json` and set the desired `semver_levels
 }
 ```
 
-Commit and push, then trigger the workflow.
+Commit and push, then wait for the next scheduled caller run.
 
 ## See Also
 

@@ -48,24 +48,35 @@ jobs:
       updates_found: ${{ steps.detect.outputs.updates_found }}
       updates_json: ${{ steps.detect.outputs.updates_json }}
     steps:
-      - name: Check out repository
+      - name: Check out caller repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+          path: caller
+          persist-credentials: false
+      - name: Check out workflow implementation
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: datasciencecampus/github-actions
+          ref: ${{ github.workflow_sha }}
+          path: implementation
           persist-credentials: false
       - name: Set up Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.13"
       - name: Install package
-        run: python -m pip install .
+        run: python -m pip install ../implementation
+        working-directory: caller
       - name: Validate pre-commit tracking alignment
         run: python -m precommit_updates validate
+        working-directory: caller
       - name: Detect available updates
         id: detect
         env:
           GH_TOKEN: ${{ github.token }}
         run: python -m precommit_updates detect
+        working-directory: caller
 
   apply-cooldown:
     name: Apply Cooldown Filters
@@ -78,26 +89,36 @@ jobs:
       skipped_updates: ${{ steps.cooldown.outputs.skipped_updates }}
     if: needs.detect-updates.outputs.updates_found == 'true'
     steps:
-      - name: Check out repository
+      - name: Check out caller repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          path: caller
+          persist-credentials: false
+      - name: Check out workflow implementation
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: datasciencecampus/github-actions
+          ref: ${{ github.workflow_sha }}
+          path: implementation
           persist-credentials: false
       - name: Set up Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.13"
       - name: Install package
-        run: python -m pip install .
+        run: python -m pip install ../implementation
+        working-directory: caller
       - name: Apply cooldown filters
         id: cooldown
         env:
           UPDATES_JSON: ${{ needs.detect-updates.outputs.updates_json }}
-          FORCE_UPDATE: ${{ github.event.inputs.force_update || false }}
-          SKIP_HOOKS: ${{ github.event.inputs.skip_hooks || '' }}
-          COOLDOWN_MAJOR: ${{ github.event.inputs.cooldown_major_days || '28' }}
-          COOLDOWN_MINOR: ${{ github.event.inputs.cooldown_minor_days || '14' }}
-          COOLDOWN_PATCH: ${{ github.event.inputs.cooldown_patch_days || '7' }}
+          FORCE_UPDATE: ${{ inputs.force_update || false }}
+          SKIP_HOOKS: ${{ inputs.skip_hooks || '' }}
+          COOLDOWN_MAJOR: ${{ inputs.cooldown_major_days || '28' }}
+          COOLDOWN_MINOR: ${{ inputs.cooldown_minor_days || '14' }}
+          COOLDOWN_PATCH: ${{ inputs.cooldown_patch_days || '7' }}
         run: python -m precommit_updates cooldown
+        working-directory: caller
 
   fetch-release-info:
     name: Fetch Release Information
@@ -109,22 +130,32 @@ jobs:
       release_info: ${{ steps.release.outputs.release_info }}
     if: needs.apply-cooldown.outputs.eligible_updates != '[]' && needs.apply-cooldown.outputs.eligible_updates != ''
     steps:
-      - name: Check out repository
+      - name: Check out caller repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          path: caller
+          persist-credentials: false
+      - name: Check out workflow implementation
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: datasciencecampus/github-actions
+          ref: ${{ github.workflow_sha }}
+          path: implementation
           persist-credentials: false
       - name: Set up Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.13"
       - name: Install package
-        run: python -m pip install .
+        run: python -m pip install ../implementation
+        working-directory: caller
       - name: Fetch release information
         id: release
         env:
           ELIGIBLE_JSON: ${{ needs.apply-cooldown.outputs.eligible_updates }}
           GH_TOKEN: ${{ github.token }}
         run: python -m precommit_updates release-info
+        working-directory: caller
 
   update-config-and-create-pr:
     name: Update Config and Create PR
@@ -135,29 +166,40 @@ jobs:
       pull-requests: write # Required to create the update pull request.
     if: needs.apply-cooldown.outputs.eligible_updates != '[]' && needs.apply-cooldown.outputs.eligible_updates != ''
     steps:
-      - name: Check out repository
+      - name: Check out caller repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+          path: caller
+          persist-credentials: false
+      - name: Check out workflow implementation
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: datasciencecampus/github-actions
+          ref: ${{ github.workflow_sha }}
+          path: implementation
           persist-credentials: false
       - name: Set up Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.13"
       - name: Install package
-        run: python -m pip install .
+        run: python -m pip install ../implementation
+        working-directory: caller
       - name: Initialize pre-commit tracking if needed
         run: python -m precommit_updates validate
+        working-directory: caller
       - name: Update configs and create PR
         env:
           RELEASE_INFO: ${{ needs.fetch-release-info.outputs.release_info }}
           SKIPPED_UPDATES: ${{ needs.apply-cooldown.outputs.skipped_updates }}
           GITHUB_TOKEN: ${{ github.token }}
-          FORCE_UPDATE: ${{ github.event.inputs.force_update || false }}
-          COOLDOWN_MAJOR: ${{ github.event.inputs.cooldown_major_days || '28' }}
-          COOLDOWN_MINOR: ${{ github.event.inputs.cooldown_minor_days || '14' }}
-          COOLDOWN_PATCH: ${{ github.event.inputs.cooldown_patch_days || '7' }}
+          FORCE_UPDATE: ${{ inputs.force_update || false }}
+          COOLDOWN_MAJOR: ${{ inputs.cooldown_major_days || '28' }}
+          COOLDOWN_MINOR: ${{ inputs.cooldown_minor_days || '14' }}
+          COOLDOWN_PATCH: ${{ inputs.cooldown_patch_days || '7' }}
         run: python -m precommit_updates apply
+        working-directory: caller
 
   no-updates:
     name: No Updates Available
