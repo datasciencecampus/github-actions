@@ -129,7 +129,7 @@ class GitHubClient:
             except ValueError:
                 continue
             version = parse_version(tag)
-            if version:
+            if version and "-" not in tag.partition("+")[0]:
                 candidates.append((version, tag, sha))
         if not candidates:
             return None
