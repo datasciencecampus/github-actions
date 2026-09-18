@@ -345,7 +345,7 @@ If the workflow cannot parse a version (e.g., no release tag), it defaults to `P
 **A**: Possible reasons:
 1. The new release was published less than the configured cooldown period ago
 2. The hook is in the `hooks_to_skip` list
-3. The upstream repository doesn't publish releases; check if commit history is being used instead
+3. The upstream repository does not publish GitHub Releases; repositories without GitHub Releases are unsupported by this workflow
 
 Check the workflow summary for skipped updates and cooldown remaining time.
 

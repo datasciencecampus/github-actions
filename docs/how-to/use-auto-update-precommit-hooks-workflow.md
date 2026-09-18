@@ -206,7 +206,7 @@ This means all pre-commit hooks are on their latest versions, or all available u
 Possible reasons:
 1. **Cooldown period active**: Check the workflow summary to see how recently the candidate release was published
 2. **Hook is in skip list**: Check `skip_hooks` input or `configs/precommit-updates-config.json`
-3. **No releases available**: The upstream repository may not use GitHub releases, so the workflow has no tagged release to evaluate.
+3. **No releases available**: The upstream repository may not use GitHub Releases. Repositories without GitHub Releases are unsupported by this workflow.
 
 To force an update:
 - Call the workflow with `force_update: true`
