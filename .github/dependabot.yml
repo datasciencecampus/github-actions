@@ -26,3 +26,16 @@ updates:
       prefix: "chore(github-actions)"
     cooldown:
       default-days: 7
+  - package-ecosystem: "pre-commit"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "tuesday"
+      time: "07:00"
+      timezone: "Europe/London"
+    labels: ["dependencies", "pre-commit", "automation"]
+    open-pull-requests-limit: 10
+    commit-message:
+      prefix: "chore(pre-commit)"
+    cooldown:
+      default-days: 7
