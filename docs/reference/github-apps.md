@@ -18,7 +18,7 @@ This repository uses two GitHub Apps with distinct responsibilities and permissi
 The `actions: write` permission is the minimum required to call
 `POST /repos/{owner}/{repo}/actions/workflows/{workflow_id}/dispatches`
 (the `workflow_dispatch` trigger endpoint). See
-[ADR-0002](../explanation/ADR-0002-workflow-dispatch-over-repository-dispatch.md)
+[ADR-0002](../explanation/adr/ADR-0002-workflow-dispatch-over-repository-dispatch.md)
 for why `workflow_dispatch` was chosen over `repository_dispatch`.
 
 **Used in:** caller workflows in approved repositories that are provisioned for this integration (see how-to guides).
