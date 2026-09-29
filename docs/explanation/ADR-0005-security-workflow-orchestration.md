@@ -36,7 +36,7 @@ Create a single orchestrator workflow (`security-analysis.yml`) that runs on `pu
    - Caller customization via workflow_call inputs (config paths, persona, advanced-security override)
 
 5. **Clear caller contract**
-   Repositories should call `security-analysis.yml`, not individual tool workflows. This prevents confusion about which workflow to use and ensures both tools always run together.
+   Repositories should call `security-analysis.yml`, not individual tool workflows. This prevents confusion about which workflow to use and runs both tools together through the supported entry point.
 
 6. **Parallel execution**
    Both tools run in parallel, reducing overall workflow runtime compared to sequential execution.
