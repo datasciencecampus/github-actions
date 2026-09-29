@@ -36,10 +36,25 @@ on:
   pull_request:
     branches: [main]
 
+run-name: "${{ github.workflow }} - ${{ github.actor }} - ${{ github.event_name == 'pull_request' && format('PR #{0}', github.event.pull_request.number) || github.ref_name }}"
+
+permissions: {} # Deny token access by default; jobs grant only what they need.
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   security-analysis:
-    uses: datasciencecampus/github-actions/.github/workflows/security-analysis.yml@<commit-sha>
+    name: security-analysis
+    permissions:
+      actions: read # Required for SARIF upload metadata lookups in private or internal repositories.
+      contents: read # Required to read repository contents during analysis.
+      security-events: write # Required to upload security analysis results.
+    uses: datasciencecampus/github-actions/.github/workflows/security-analysis.yml@<COMMIT-SHA> # VERSION NO
 ```
+
+The top-level `permissions: {}` denies `GITHUB_TOKEN` access by default. The reusable-workflow job then grants only the permissions the analysis needs: `actions: read` for SARIF metadata lookups, `contents: read` to scan repository content, and `security-events: write` to upload SARIF results. Use the same permission declarations with the custom configuration below.
 
 ### Option 2: Custom configuration
 
