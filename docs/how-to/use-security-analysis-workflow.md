@@ -25,7 +25,7 @@ Add a security analysis workflow to your repository's `.github/workflows/` direc
 
 ### Option 1: Default configuration
 
-Use organization defaults (zizmor persona: `auditor`, all checks enabled):
+Use the default settings (zizmor persona: `auditor`, both tools enabled):
 
 ```yaml
 name: Security Analysis
@@ -51,7 +51,7 @@ jobs:
       actions: read # Required for SARIF upload metadata lookups in private or internal repositories.
       contents: read # Required to read repository contents during analysis.
       security-events: write # Required to upload security analysis results.
-    uses: datasciencecampus/github-actions/.github/workflows/security-analysis.yml@<COMMIT-SHA> # VERSION NO
+    uses: datasciencecampus/github-actions/.github/workflows/security-analysis.yml@<commit-sha>
 ```
 
 The top-level `permissions: {}` denies `GITHUB_TOKEN` access by default. The reusable-workflow job then grants only the permissions the analysis needs: `actions: read` for SARIF metadata lookups, `contents: read` to scan repository content, and `security-events: write` to upload SARIF results. Use the same permission declarations with the custom configuration below.
@@ -69,8 +69,15 @@ on:
   pull_request:
     branches: [main]
 
+permissions: {} # Deny token access by default; jobs grant only what they need.
+
 jobs:
   security-analysis:
+    name: security-analysis
+    permissions:
+      actions: read # Required for SARIF upload metadata lookups in private or internal repositories.
+      contents: read # Required to read repository contents during analysis.
+      security-events: write # Required to upload security analysis results.
     uses: datasciencecampus/github-actions/.github/workflows/security-analysis.yml@<commit-sha>
     with:
       zizmor-config: ./config/zizmor-custom.yaml
@@ -81,14 +88,14 @@ jobs:
 
 ## Configuration
 
-### Organization config files
+### Config files
 
-Both tools use organization-managed default config files:
+The default config paths are relative to the calling repository's checkout:
 
-- **zizmor**: `datasciencecampus/github-actions:./configs/zizmor.yaml`
-- **checkov**: `datasciencecampus/github-actions:./configs/checkov.yml`
+- **zizmor**: `./configs/zizmor.yaml`
+- **checkov**: `./configs/checkov.yml`
 
-To customize, create your own config files in your repository and reference them via `zizmor-config` and `checkov-config` inputs.
+This repository contains these files for its own push and pull-request runs. When calling the reusable workflow from another repository, provide the files at these paths or set `zizmor-config` and `checkov-config` to config files in the caller's repository. The called workflow does not fetch config files from this repository.
 
 ### zizmor personas
 
@@ -160,8 +167,15 @@ on:
           - auditor
         default: auditor
 
+permissions: {} # Deny token access by default; jobs grant only what they need.
+
 jobs:
   security-analysis:
+    name: security-analysis
+    permissions:
+      actions: read # Required for SARIF upload metadata lookups in private or internal repositories.
+      contents: read # Required to read repository contents during analysis.
+      security-events: write # Required to upload security analysis results.
     uses: datasciencecampus/github-actions/.github/workflows/security-analysis.yml@<commit-sha>
     with:
       zizmor-persona: ${{ github.event.inputs.zizmor-persona || 'auditor' }}

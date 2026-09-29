@@ -2,9 +2,9 @@
 
 This page lists the workflows in this repository and their caller-facing contracts.
 
-## Shared credential model
+## Project workflow credentials
 
-Authorized callers use the dispatch credentials to trigger workflows:
+Callers of the project-routing workflows use these credentials to dispatch the internal implementations:
 
 - `PROJECT_ROUTER_BOT_APP_ID` (Actions variable, org-level)
 - `PROJECT_ROUTER_BOT_PRIVATE_KEY` (Actions secret, org-level)
@@ -12,7 +12,7 @@ Authorized callers use the dispatch credentials to trigger workflows:
 > [!IMPORTANT]
 > For public caller repositories that run these workflows automatically on issue or pull request creation events, those events must be limited to trusted actors. In practice, require collaborator-only issue or pull request creation, or an equivalent repository control. Configure this in the caller repository at `https://github.com/<owner>/<repo>/settings` under `Settings > General > Features`, then use `Issues > Issue permissions` or `Pull requests > Pull request permissions` as appropriate.
 
-Project-handling credentials are used internally and are not required from callers. The called workflows verify that the requested organization matches this repository owner and that the submitted issue or pull request node ID resolves back to the repository named in the request. See [GitHub Apps reference](github-apps.md).
+Project-handling credentials are used internally and are not required from callers. The project workflows verify that the requested organization matches this repository owner and that the submitted issue or pull request node ID resolves back to the repository named in the request. See [GitHub Apps reference](github-apps.md).
 
 ## add-issue-to-projects
 
@@ -173,9 +173,9 @@ Orchestrates GitHub Actions security analysis with `zizmor` and infrastructure s
 
 ### Security Analysis Call Inputs (workflow_call only)
 
-- `zizmor-config`: optional string. Path to zizmor config file. Defaults to `./configs/zizmor.yaml`.
+- `zizmor-config`: optional string. Path to zizmor config file in the caller's checkout. Defaults to `./configs/zizmor.yaml`.
 - `zizmor-persona`: optional string. Persona for zizmor analysis: `regular`, `pedantic`, or `auditor`. Defaults to `auditor`.
-- `checkov-config`: optional string. Path to checkov config file. Defaults to `./configs/checkov.yml`.
+- `checkov-config`: optional string. Path to checkov config file in the caller's checkout. Defaults to `./configs/checkov.yml`.
 - `advanced-security`: optional boolean. Upload SARIF results to GitHub Advanced Security. Tri-state behavior:
   - Omitted (default): Auto-detect based on repository privacy (true for public, false for private)
   - `true`: Always upload
@@ -186,15 +186,49 @@ Orchestrates GitHub Actions security analysis with `zizmor` and infrastructure s
 1. Runs `zizmor` to scan GitHub Actions workflows for security misconfigurations.
 2. Runs `checkov` to scan infrastructure-as-code and configuration files.
 3. Both tools run in parallel and upload SARIF results to GitHub Advanced Security (when enabled).
-4. Uses organization-managed config defaults from `./configs/zizmor.yaml` and `./configs/checkov.yml`.
+4. Reads config files from the caller's checkout at the configured paths.
 
 ### Security Analysis Notes
 
-- **Default triggers**: On `push` and `pull_request` to `main`, uses organization defaults (zizmor persona: `auditor`, both tools enabled).
+- **Default triggers**: On this repository's `push` and `pull_request` events for `main`, the config files in this repository are used (zizmor persona: `auditor`, both tools enabled). Callers using `workflow_call` must provide the config files in their own checkout or set the config path inputs.
 - **Customization**: Callers can override config paths, persona, and advanced-security via `workflow_call` inputs.
 - **Tri-state logic**: `advanced-security` input is tri-state (omit = auto-detect, true = enable, false = disable). This logic is computed by the orchestrator and passed to child workflows.
 - **Concurrency**: Managed at the orchestrator level to prevent duplicate runs.
-- **Child workflows**: `zizmor.yml` and `checkov.yml` are internal workflows and should be called only via `security-analysis.yml`.
+- **Child workflows**: `zizmor.yml` and `checkov.yml` expose `workflow_call` and can be called directly, but callers should use `security-analysis.yml` to run both tools with the shared trigger, concurrency, and SARIF policy.
+
+## terraform-quality
+
+Workflow file: `.github/workflows/terraform-quality.yml`
+
+### Terraform Quality Trigger
+
+`workflow_call` only.
+
+### Terraform Quality Inputs
+
+- `terraform-dirs`: optional JSON array of repository-relative directories to validate. Defaults to the four standard environment directories. Input validation rejects non-arrays, non-string entries, empty paths, absolute paths, and paths containing `..`.
+- `terraform-version`: optional string. Terraform version to install. Defaults to `1.14.3`.
+- `run-fmt`: optional boolean. Run the Terraform formatting check. Defaults to `true`.
+- `run-validate`: optional boolean. Run `terraform init -backend=false` and `terraform validate` for each configured directory. Defaults to `true`.
+- `run-tflint`: optional boolean. Run TFLint. Defaults to `true`.
+- `continue_on_error`: optional boolean intended for negative testing. Defaults to `false`; when enabled, failures in the validation checks do not fail the workflow.
+
+### Terraform Quality Behavior
+
+1. Validates the `terraform-dirs` input before running checks.
+2. Runs `terraform fmt -check -recursive terraform` when formatting is enabled.
+3. Runs `terraform init -backend=false` and `terraform validate` for each configured directory when validation is enabled.
+4. Runs TFLint recursively under `terraform/` when enabled, using `configs/.tflint.hcl` from the caller's checkout.
+
+### Terraform Quality Notes
+
+- `terraform-dirs` controls only `terraform validate`; formatting and TFLint scan the entire `terraform/` directory.
+- The caller must provide `configs/.tflint.hcl` when TFLint is enabled.
+- The workflow exposes a `validation-passed` output indicating whether `terraform-dirs` input validation succeeded.
+
+### Terraform Quality `GITHUB_TOKEN` Permissions
+
+- `contents: read`
 
 ## zizmor
 

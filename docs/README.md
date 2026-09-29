@@ -12,12 +12,15 @@ Keep docs short and practical.
 ## Pages
 
 - How-to:
-  - `docs/how-to/use-add-issue-to-projects-workflow.md`
-  - `docs/how-to/use-add-pr-to-projects-workflow.md`
+  - [Use the add-issue-to-projects reusable workflow](how-to/use-add-issue-to-projects-workflow.md)
+  - [Use the add-pr-to-projects reusable workflow](how-to/use-add-pr-to-projects-workflow.md)
+  - [Use the security-analysis reusable workflow](how-to/use-security-analysis-workflow.md)
+  - [Use the terraform-quality reusable workflow](how-to/use-terraform-quality-workflow.md)
 - Reference:
-  - `docs/reference/reusable-workflows.md`
+  - [GitHub Apps reference](reference/github-apps.md)
+  - [Reusable workflows reference](reference/reusable-workflows.md)
 - Explanation:
-  - `docs/explanation/README.md`
+  - [Explanation index](explanation/README.md)
 
 ## Rules
 
