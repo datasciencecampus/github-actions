@@ -5,8 +5,6 @@ This repository contains reusable GitHub Actions workflows for the `datasciencec
 ## Repository purpose
 
 - Use this repository when a workflow needs `datasciencecampus` credentials or policies, or when public repositories must be able to call it.
-- Use `ONSdigital/ons-github-actions` for broadly reusable workflows only if every caller can access that internal repository. Public repositories cannot call it.
-
 ## Security posture
 
 - Changes in this repository should follow secure-by-design principles.
