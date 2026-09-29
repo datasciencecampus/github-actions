@@ -97,7 +97,7 @@ flowchart LR
 
 Related references:
 
-- [ADR-0001: Called workflow owns secret usage](ADR-0001-called-workflow-owns-secret-usage.md)
-- [ADR-0002: Use workflow_dispatch instead of repository_dispatch](ADR-0002-workflow-dispatch-over-repository-dispatch.md)
-- [ADR-0004: Separate reusable workflow pinning from dispatch ref](ADR-0004-separate-reusable-pinning-from-dispatch-ref.md)
+- [ADR-0001: Called workflow owns secret usage](adr/ADR-0001-called-workflow-owns-secret-usage.md)
+- [ADR-0002: Use workflow_dispatch instead of repository_dispatch](adr/ADR-0002-workflow-dispatch-over-repository-dispatch.md)
+- [ADR-0004: Separate reusable workflow pinning from dispatch ref](adr/ADR-0004-separate-reusable-pinning-from-dispatch-ref.md)
 - [GitHub Apps reference](../reference/github-apps.md)

@@ -6,13 +6,14 @@ This repository contains workflows that depend on `datasciencecampus` organizati
 
 ## Overview
 
-This repository currently provides three public reusable workflows:
+This repository currently provides four public reusable workflows:
 
 - `add-issue-to-projects`: add new issues to one or more `datasciencecampus` ProjectsV2 boards.
 - `add-pr-to-projects`: add new pull requests to one or more `datasciencecampus` ProjectsV2 boards and set configured field values.
 - `security-analysis`: scan GitHub Actions workflows and infrastructure-as-code for security issues using zizmor and checkov.
+- `terraform-quality`: check Terraform formatting, validate configuration, and run TFLint.
 
-Each public reusable workflow has a matching internal implementation workflow. The public workflow is the caller-facing contract; the internal workflow owns the privileged `workflow_dispatch` path and project mutation logic.
+The project workflows each have a matching internal implementation workflow. Their public workflows are the caller-facing contracts; the internal workflows own the privileged `workflow_dispatch` path and project mutation logic.
 
 ## Workflow Catalog
 
@@ -24,6 +25,13 @@ Orchestrates GitHub Actions security analysis with `zizmor` and infrastructure s
 - Child workflow (zizmor): [.github/workflows/zizmor.yml](.github/workflows/zizmor.yml)
 - Child workflow (checkov): [.github/workflows/checkov.yml](.github/workflows/checkov.yml)
 - How-to guide: [docs/how-to/use-security-analysis-workflow.md](docs/how-to/use-security-analysis-workflow.md)
+
+### `terraform-quality`
+
+Checks Terraform configuration with `terraform fmt`, `terraform validate`, and TFLint. Callers can select validation directories and Terraform version, and enable or disable each check.
+
+- Reusable workflow: [.github/workflows/terraform-quality.yml](.github/workflows/terraform-quality.yml)
+- How-to guide: [docs/how-to/use-terraform-quality-workflow.md](docs/how-to/use-terraform-quality-workflow.md)
 
 ### `add-issue-to-projects`
 
@@ -47,8 +55,8 @@ Adds opened pull requests to `datasciencecampus` Projects and sets configured fi
 
 Consumers should call the public reusable workflows from other repositories using `uses:`.
 
-- By default, the reusable workflows dispatch the release tag recorded in metadata stored alongside the invoked workflow revision.
-- Set `implementation_ref` only when you need to override that release-managed dispatch target with a specific branch or tag.
+- The `add-issue-to-projects` and `add-pr-to-projects` workflows dispatch the release tag recorded in metadata alongside the invoked workflow revision by default.
+- Set `implementation_ref` on either project workflow only when you need to override that release-managed dispatch target with a specific branch or tag.
 
 > [!IMPORTANT]
 > Public repositories that trigger these workflows automatically from issue or pull request creation events must restrict those events to trusted actors, for example by allowing only collaborators to open issues or pull requests. Configure this in the caller repository at `https://github.com/<owner>/<repo>/settings` under `Settings > General > Features`, then use `Issues > Issue permissions` or `Pull requests > Pull request permissions` as appropriate.

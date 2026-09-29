@@ -54,7 +54,7 @@ jobs:
     with:
       repository: ${{ github.event.repository.name }}
       issue_node_id: ${{ github.event.issue.node_id }}
-         project_field_values: '[{"project":1234}]'
+      project_field_values: '[{"project":1234}]'
 ```
 
 ## Rationale

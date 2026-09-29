@@ -36,7 +36,7 @@ Create a single orchestrator workflow (`security-analysis.yml`) that runs on `pu
    - Caller customization via workflow_call inputs (config paths, persona, advanced-security override)
 
 5. **Clear caller contract**
-   Repositories should call `security-analysis.yml`, not individual tool workflows. This prevents confusion about which workflow to use and ensures both tools always run together.
+   Repositories should call `security-analysis.yml`, not individual tool workflows. This prevents confusion about which workflow to use and runs both tools together through the supported entry point.
 
 6. **Parallel execution**
    Both tools run in parallel, reducing overall workflow runtime compared to sequential execution.
@@ -46,15 +46,15 @@ Create a single orchestrator workflow (`security-analysis.yml`) that runs on `pu
 Positive:
 
 - Simpler mental model for repository maintainers (one workflow to add, not two)
-- Guaranteed consistency: both tools always run together
+- Consistent results when callers use the orchestrator: both tools run together
 - Easier to update default behavior organization-wide (one place to change)
-- Enforces "security by default" — repositories can't accidentally skip one tool
+- Provides one recommended entry point that includes both tools
 - Flexible customization for specific repositories via workflow_call
 
 Negative:
 
 - If one tool needs to run independently, we'd need to refactor the architecture
-- Child workflows cannot be called directly (only via orchestrator), which limits flexibility
+- Child workflows expose `workflow_call` and can be called directly, but direct calls bypass the orchestrator's shared triggers, concurrency, and combined-results contract
 - Orchestrator adds one layer of indirection (minimal performance impact)
 
 ## Alternatives considered
@@ -68,7 +68,7 @@ Negative:
    - Con: Composite actions don't support workflow triggers or SARIF uploads
 
 3. **Orchestrator + direct child calls**
-   - Current decision; child workflows are reusable-only to prevent independent runs
+   - Current decision; child workflows expose only `workflow_call`. Callers should use the orchestrator to run both tools together, although GitHub does not prevent direct calls to an individual child workflow.
 
 ## Related decisions
 
