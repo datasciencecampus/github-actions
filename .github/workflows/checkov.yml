@@ -32,13 +32,13 @@ jobs:
         with:
           persist-credentials: false
       - name: Checkov GitHub Action
-        uses: bridgecrewio/checkov-action@5798bad4f6dd9c1fb67ae3ec10d42d8fb67037c4 # v12.3126.0
+        uses: bridgecrewio/checkov-action@6f26dc90000b74feb589a906cdfae540f5119895 # v12.3134.0
         with:
           config_file: ${{ inputs['config-path'] || './configs/checkov.yml' }}
           directory: "."
           output_format: cli,sarif
           output_file_path: console,results.sarif
-      - uses: github/codeql-action/upload-sarif@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
+      - uses: github/codeql-action/upload-sarif@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
         if: (success() || failure()) && inputs['advanced-security']
         with:
           sarif_file: results.sarif
